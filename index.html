@@ -13,7 +13,12 @@
 <!-- GeoTIFF / georaster — stable CDN -->
 <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
- 
+<!-- Firebase for real-time sync -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<!-- JSZip for ZIP export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
  
@@ -435,6 +440,34 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
 .msc-label{font-size:10px;color:var(--text2);flex:1;}
 .msc-range{width:72px;accent-color:var(--brand);}
 .msc-val{min-width:30px;text-align:right;font-size:10px;font-family:var(--mono);color:var(--brand);}
+
+/* ── EXPORT FORMAT BAR ── */
+.exp-fmt-bar{display:flex;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:3px;gap:3px;margin-top:10px;}
+.exp-fmt-btn{flex:1;padding:8px 6px;border-radius:5px;background:none;border:none;color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--font);transition:var(--tr);white-space:nowrap;text-align:center;line-height:1.3;}
+.exp-fmt-btn:hover:not(.active){color:var(--text2);background:var(--bg4);}
+.exp-fmt-btn.active{background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(31,111,235,.35);}
+.exp-fmt-panel{overflow:hidden;transition:max-height .3s cubic-bezier(.4,0,.2,1);}
+/* ── SYNC STATUS BADGE ── */
+#sync-status-btn{font-size:10px;letter-spacing:.1px;transition:var(--tr);}
+#sync-status-btn.on{background:rgba(46,160,67,.15);border-color:var(--accent);color:var(--accent);}
+/* ── EXPORT CHECKBOX ROW ── */
+.exp-chk-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);margin-bottom:7px;cursor:pointer;padding:4px 6px;border-radius:5px;transition:var(--tr);}
+.exp-chk-row:hover{background:var(--bg3);}
+.exp-chk-row:last-child{margin-bottom:0;}
+/* ── SYNC MODAL ── */
+.sync-field{margin-bottom:10px;}
+.sync-field .form-label{margin-bottom:4px;}
+.sync-status-banner{border-radius:var(--radius);padding:9px 12px;font-size:11px;font-weight:700;text-align:center;margin-bottom:14px;border:1px solid;}
+.sync-status-banner.off{background:var(--bg3);border-color:var(--border);color:var(--text3);}
+.sync-status-banner.on{background:rgba(46,160,67,.12);border-color:var(--accent);color:var(--accent);}
+.sync-status-banner.err{background:var(--extreme-bg);border-color:var(--extreme);color:var(--extreme);}
+/* ── PICKER MAP ── */
+#picker-map .leaflet-tile-pane{filter:none;}
+/* ── COLLAPSIBLE SECTION ── */
+.collapsible-hdr{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:5px 0;}
+.collapsible-hdr:hover .form-section-title{color:var(--text2);}
+.ch-arrow{font-size:9px;transition:transform .2s;color:var(--text3);margin-left:auto;}
+.ch-arrow.open{transform:rotate(180deg);}
 </style>
 </head>
 <body>
@@ -458,6 +491,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
   <div class="topbar-divider"></div>
   <button class="tbtn" onclick="openModal('modal-import')">📁 Import</button>
   <button class="tbtn" onclick="openExportModal()">⬇ Export</button>
+  <button id="sync-status-btn" class="tbtn" onclick="openModal('modal-sync')" title="Sinkronisasi Real-Time">🔌 Offline</button>
   <button class="tbtn gem" onclick="openModal('modal-gemini')">✦ Gemini</button>
   <div class="topbar-divider"></div>
   <button class="tbtn" onclick="toggleSidebar()">☰</button>
@@ -981,52 +1015,81 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
   </div>
 </div>
  
-<!-- EXPORT MODAL -->
+<!-- EXPORT MODAL — REDESIGNED -->
 <div class="modal-overlay" id="modal-export">
-  <div class="modal sm">
+  <div class="modal md">
     <div class="modal-header">
       <div style="font-size:16px">⬇️</div>
-      <div class="modal-title">Export Data</div>
+      <div class="modal-title">Export &amp; Simpan Peta</div>
       <button class="modal-close" onclick="closeModal('modal-export')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-section-title">Nama File</div>
-      <div class="form-group" style="margin-bottom:12px">
-        <label class="form-label">Nama File Export *</label>
-        <div style="display:flex;align-items:center;gap:6px">
-          <input type="text" class="form-input" id="export-filename" value="K3_HIRARC_ATP_IPB" placeholder="nama_file">
-          <span style="font-size:11px;color:var(--text3);white-space:nowrap">.geojson</span>
+
+      <!-- Nama File -->
+      <div class="form-section-title">📝 Nama File</div>
+      <div class="form-group" style="margin-bottom:14px">
+        <input type="text" class="form-input" id="export-filename" value="K3_HIRARC_ATP_IPB" placeholder="nama_file (tanpa ekstensi)">
+        <span class="form-hint">Nama yang akan digunakan untuk semua file yang diunduh</span>
+      </div>
+
+      <!-- Konten yang Disimpan -->
+      <div class="form-section-title">📦 Konten yang Disimpan</div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:14px">
+        <label class="exp-chk-row">
+          <input type="checkbox" id="exp-include-fac" checked style="accent-color:var(--brand)">
+          <span>🏭</span><span>Fasilitas &amp; Aktivitas K3 <small style="color:var(--text3)">(titik, popup, data HIRARC)</small></span>
+        </label>
+        <label class="exp-chk-row">
+          <input type="checkbox" id="exp-include-dz" checked style="accent-color:var(--brand)">
+          <span>⚠️</span><span>Area Bahaya <small style="color:var(--text3)">(titik &amp; lingkaran radius)</small></span>
+        </label>
+        <label class="exp-chk-row">
+          <input type="checkbox" id="exp-include-layers" checked style="accent-color:var(--brand)">
+          <span>🗺️</span><span>Layer GeoJSON yang Dimuat <small style="color:var(--text3)">(beserta warna &amp; gaya)</small></span>
+        </label>
+        <label class="exp-chk-row">
+          <input type="checkbox" id="exp-include-tif" checked style="accent-color:var(--brand)">
+          <span>🛰️</span><span>File GeoTIFF <small style="color:var(--text3)">(hanya untuk HTML &amp; ZIP)</small></span>
+        </label>
+      </div>
+
+      <!-- Format Selector -->
+      <div class="collapsible-hdr" onclick="toggleExportFmtPanel()">
+        <div class="form-section-title" style="border:none;padding:0;margin:0">🗂️ Pilih Format Ekspor</div>
+        <span id="exp-fmt-badge" style="margin-left:8px;padding:2px 8px;border-radius:20px;background:var(--brand);color:#fff;font-size:9px;font-weight:700">GeoJSON</span>
+        <span class="ch-arrow" id="exp-fmt-arrow">▼</span>
+      </div>
+
+      <div class="exp-fmt-panel" id="export-fmt-panel" style="max-height:0">
+        <!-- Sliding bar buttons -->
+        <div class="exp-fmt-bar">
+          <button class="exp-fmt-btn active" id="efmt-geojson" onclick="selectExportFmt('geojson')">🗺️ GeoJSON</button>
+          <button class="exp-fmt-btn" id="efmt-html" onclick="selectExportFmt('html')">📄 HTML</button>
+          <button class="exp-fmt-btn" id="efmt-zip" onclick="selectExportFmt('zip')">📦 ZIP</button>
         </div>
-        <span class="form-hint">Nama file yang akan disimpan di perangkat Anda</span>
-      </div>
-      <div class="form-section-title">Opsi Export</div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);margin-bottom:8px;cursor:pointer">
-        <input type="checkbox" id="exp-include-dz" checked style="accent-color:var(--brand)"> Sertakan Area Bahaya
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);margin-bottom:8px;cursor:pointer">
-        <input type="checkbox" id="exp-include-fac" checked style="accent-color:var(--brand)"> Sertakan Fasilitas
-      </label>
-      <div style="padding:10px;background:var(--bg3);border-radius:6px;font-size:10px;color:var(--text3)">
-        File akan diekspor dalam format GeoJSON yang kompatibel dengan QGIS, ArcGIS, dan perangkat lunak GIS lainnya.
-      </div>
-      <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-      <div class="form-section-title">💾 Simpan &amp; Pulihkan Progres</div>
-      <p style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.6">Simpan seluruh progres kerja (fasilitas, aktivitas, bahaya, layer GeoJSON) agar dapat dibuka kembali di perangkat atau browser lain.</p>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="mf-btn brand" style="height:38px" onclick="exportProgress()">💾 Simpan Progres (.json)</button>
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="file" id="import-progress-file" accept=".json" style="display:none" onchange="importProgress(event)">
-          <button class="mf-btn cancel" style="flex:1;height:36px" onclick="document.getElementById('import-progress-file').click()">📂 Muat Progres (.json)</button>
+        <!-- Format description -->
+        <div id="exp-fmt-desc" style="margin-top:8px;padding:10px;background:var(--bg3);border-radius:var(--radius);font-size:10px;color:var(--text3);line-height:1.6">
+          <strong style="color:var(--text2)">GeoJSON:</strong> Satu file <code>.geojson</code> berisi fasilitas, area bahaya &amp; aktivitas. Warna layer disimpan dalam metadata <code>_k3_style</code>. Kompatibel QGIS, ArcGIS, dan GIS lainnya.
         </div>
-        <button class="mf-btn save" style="height:38px;background:var(--purple,#7c3aed);border-color:#7c3aed" onclick="saveAsHTML()">📄 Unduh Snapshot HTML</button>
       </div>
-      <div style="margin-top:8px;padding:8px;background:var(--bg3);border-radius:6px;font-size:10px;color:var(--text3);line-height:1.5">
-        <strong>💡 Catatan:</strong> Snapshot HTML menyimpan semua data termasuk GeoJSON langsung di dalam file HTML, sehingga dapat dibuka di perangkat lain tanpa perlu upload ulang file GeoJSON. File GeoTIFF perlu di-upload ulang karena ukurannya terlalu besar untuk disimpan dalam HTML.
-      </div>
+
     </div>
-    <div class="modal-footer">
-      <button class="mf-btn cancel" onclick="closeModal('modal-export')">Tutup</button>
-      <button class="mf-btn save" onclick="doExport()">⬇ Download GeoJSON</button>
+
+    <div class="modal-footer" style="flex-wrap:wrap;gap:7px;flex-direction:column">
+      <!-- Simpan & Muat Progres -->
+      <div style="width:100%">
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">💾 Simpan &amp; Muat Progres</div>
+        <div style="display:flex;gap:7px">
+          <button class="mf-btn brand" style="flex:1;height:34px;font-size:11px" onclick="exportProgress()">💾 Simpan (.json)</button>
+          <input type="file" id="import-html-file" accept=".html,.htm,.json" style="display:none" onchange="importHTMLProgress(event)">
+          <button class="mf-btn cancel" style="flex:1;height:34px;font-size:11px" onclick="document.getElementById('import-html-file').click()">📂 Muat Progres (.html/.json)</button>
+        </div>
+      </div>
+      <!-- Main action buttons -->
+      <div style="width:100%;display:flex;gap:7px">
+        <button class="mf-btn cancel" onclick="closeModal('modal-export')">Tutup</button>
+        <button class="mf-btn save" style="flex:2" id="export-main-btn" onclick="doExportSelected()">⬇️ Export GeoJSON</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1070,6 +1133,63 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
       </div>
     </div>
     <div class="modal-footer"><button class="mf-btn save" onclick="closeModal('modal-gemini')">Selesai</button></div>
+  </div>
+</div>
+
+
+<!-- ══ MODAL: SINKRONISASI REAL-TIME ══ -->
+<div class="modal-overlay" id="modal-sync">
+  <div class="modal sm">
+    <div class="modal-header">
+      <div style="font-size:16px">🔗</div>
+      <div class="modal-title">Sinkronisasi Real-Time</div>
+      <button class="modal-close" onclick="closeModal('modal-sync')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="sync-status-banner off" id="sync-banner">🔌 Belum terhubung · Semua perubahan hanya tersimpan lokal</div>
+
+      <div class="form-section-title">🔑 Kode Room Kolaborasi</div>
+      <div class="sync-field">
+        <div style="display:flex;gap:6px;margin-bottom:4px">
+          <input type="text" class="form-input" id="sync-room-code" placeholder="mis. atp-k3-lab-2024" style="flex:1">
+          <button onclick="generateRoomCode()" style="padding:0 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer;font-family:var(--font);font-weight:600;white-space:nowrap">🔀 Acak</button>
+        </div>
+        <span class="form-hint">Bagikan kode ini ke rekan agar semua terhubung ke room yang sama</span>
+      </div>
+
+      <div class="form-section-title" style="margin-top:12px">⚙️ Konfigurasi Firebase</div>
+      <div class="sync-field">
+        <label class="form-label">Database URL *</label>
+        <input type="text" class="form-input" id="sync-fb-url" placeholder="https://your-project-default-rtdb.firebaseio.com">
+      </div>
+      <div class="sync-field">
+        <label class="form-label">API Key *</label>
+        <input type="text" class="form-input" id="sync-fb-apikey" placeholder="AIzaSy...">
+      </div>
+      <div class="sync-field" style="margin-bottom:14px">
+        <label class="form-label">Project ID *</label>
+        <input type="text" class="form-input" id="sync-fb-projectid" placeholder="nama-project-firebase">
+      </div>
+
+      <div style="padding:10px;background:rgba(31,111,235,.07);border:1px solid rgba(31,111,235,.2);border-radius:var(--radius);font-size:10px;color:var(--text3);line-height:1.65;margin-bottom:12px">
+        <strong style="color:var(--brand2)">📋 Cara Setup Firebase (GRATIS):</strong><br>
+        1. Buka <a href="https://console.firebase.google.com" target="_blank" style="color:var(--brand2)">console.firebase.google.com</a> → Buat project baru<br>
+        2. Build → Realtime Database → Create database<br>
+        3. Rules → Edit → set: <code style="background:var(--bg4);padding:1px 4px;border-radius:3px">".read": true, ".write": true</code> → Publish<br>
+        4. Project Settings → General → salin <strong>Web API Key</strong><br>
+        5. Copy Database URL dari halaman Realtime Database<br>
+        <br>
+        <strong style="color:var(--medium)">⚠️ GeoTIFF tidak disinkronkan</strong> (terlalu besar). Gunakan export HTML untuk berbagi TIF.
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <button class="mf-btn save" style="flex:2" onclick="connectSync()">🔗 Hubungkan &amp; Sinkronkan</button>
+        <button class="mf-btn danger" style="flex:1" onclick="disconnectSync()">🔌 Putuskan</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="mf-btn cancel" onclick="closeModal('modal-sync')">Tutup</button>
+    </div>
   </div>
 </div>
  
@@ -1128,6 +1248,21 @@ let geojsonFeatures = []; // alias kept for link modal compatibility (flat feat 
 let linkMap = JSON.parse(localStorage.getItem('k3_links')||'{}'); // {sourceId: globalFeatureIndex}
 let activeFilter = 'all';
 let detailFacId = null;
+
+// ── RAW DATA STORAGE (for export & HTML snapshot) ─────────────
+let geojsonRawData = {};  // {fileId: {name, text}}
+let tifRawBuffers  = [];  // [{fileId, name, size, buf: ArrayBuffer}]
+
+// ── FIREBASE REAL-TIME SYNC ───────────────────────────────────
+let fbSyncEnabled = false, fbDb = null, fbRoomRef = null, fbIgnoreNext = false;
+
+// ── EXPORT UI STATE ──────────────────────────────────────────
+let currentExportFmt = 'geojson';
+let exportFmtPanelOpen = false;
+
+// ── MAP PICKER STATE ─────────────────────────────────────────
+let pickerMap = null, pickerSelectedCoord = null;
+let pickerTargetInput = null, pickerTargetBtn = null;
  
 // ── DEMO DATA ────────────────────────────────────────────
 const DEMO_FAC = [
@@ -1298,6 +1433,7 @@ function save() {
   localStorage.setItem('k3_fac', JSON.stringify(facilities));
   localStorage.setItem('k3_dz', JSON.stringify(dangerZones));
   localStorage.setItem('k3_links', JSON.stringify(linkMap));
+  if (fbSyncEnabled) pushToCloud();
 }
  
 function facLevel(fac) {
@@ -1849,7 +1985,7 @@ function doDrop(e,type) {
   }
 }
  
-function processGeoJSONFile(file) {
+function processGeoJSONFile(file, savedFileId=null) {
   const st=document.getElementById('geojson-status'); st.style.display='block';
   st.textContent=`⏳ Memuat ${file.name}...`; st.style.color='var(--text2)';
   const reader=new FileReader();
@@ -1857,7 +1993,10 @@ function processGeoJSONFile(file) {
     try {
       const data=JSON.parse(e.target.result);
       const rawFeatures = data.features||[];
-      const fileId = 'gjf_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+      const fileId = savedFileId || ('gjf_'+Date.now()+'_'+Math.random().toString(36).slice(2,6));
+
+      // ── Store raw text for export/sync ────────────────────────
+      geojsonRawData[fileId] = { name: file.name, text: e.target.result };
  
       // Build a dedicated Leaflet layer for THIS file only (do NOT clear others)
       const fileLyr = L.geoJSON(data, {
@@ -1917,6 +2056,8 @@ function processGeoJSONFile(file) {
       st.style.color='var(--low)';
       renderFileLists();
       showToast(`✅ GeoJSON dimuat: ${rawFeatures.length} fitur dari ${file.name}`);
+      // Sync GeoJSON to cloud
+      if (fbSyncEnabled) pushToCloud();
     } catch(err) {
       st.textContent=`❌ Gagal memuat ${file.name}: ${err.message}`; st.style.color='var(--extreme)';
       console.error('GeoJSON error:', err);
@@ -1983,7 +2124,10 @@ async function processGeoTIF(snap) {
  
   try {
     st.textContent = `⏳ Parsing GeoTIFF ${fileName}...`;
- 
+
+    // ── Save buffer COPY before parsing (parseGeoraster may transfer it) ──
+    const bufForExport = snap.buf.slice(0);
+
     // buf is already an ArrayBuffer — no file handle needed
     const georaster = await parseGeoraster(snap.buf);
  
@@ -2081,6 +2225,8 @@ async function processGeoTIF(snap) {
  
     const tifFileId = 'tif_' + Date.now();
     tifMetaMap[tifFileId] = fileMeta;
+    // ── Store buffer for export ────────────────────────────────
+    tifRawBuffers.push({ fileId: tifFileId, name: fileName, size: snap.size, buf: bufForExport });
     registerFile(fileName, 'tif', fileTifGroup, null, tifFileId);
  
     st.innerHTML = `✅ <b>${fileName}</b> — ${georaster.width}×${georaster.height}px, ${georaster.numberOfRasters} band`;
@@ -2167,29 +2313,85 @@ function saveLinks() {
 }
  
 // ═══════════════════════════════════════════════════════
-// EXPORT
+// EXPORT — REDESIGNED
 // ═══════════════════════════════════════════════════════
-function openExportModal() { openModal('modal-export'); }
- 
-function doExport() {
-  const filename=(document.getElementById('export-filename').value.trim()||'K3_HIRARC_ATP_IPB');
-  const incFac=document.getElementById('exp-include-fac').checked;
-  const incDz=document.getElementById('exp-include-dz').checked;
-  const features=[];
+function openExportModal() {
+  exportFmtPanelOpen = false;
+  const panel = document.getElementById('export-fmt-panel');
+  if (panel) { panel.style.maxHeight = '0'; }
+  const arrow = document.getElementById('exp-fmt-arrow');
+  if (arrow) arrow.classList.remove('open');
+  openModal('modal-export');
+}
+
+const FMT_DESC = {
+  geojson: '<strong style="color:var(--text2)">GeoJSON:</strong> Satu file <code>.geojson</code> berisi fasilitas, area bahaya &amp; aktivitas. Warna dan gaya layer disimpan dalam metadata <code>_k3_style</code>. Kompatibel QGIS, ArcGIS, dll. Layer GeoJSON yang dimuat akan diunduh sebagai file terpisah.',
+  html: '<strong style="color:var(--text2)">HTML Snapshot:</strong> Satu file <code>.html</code> mandiri yang dapat dibuka di browser manapun. Berisi SEMUA data termasuk fasilitas, aktivitas, area bahaya, layer GeoJSON (embedded), dan GeoTIFF (embedded base64). Buka file ini di device lain dan peta tampil lengkap.',
+  zip: '<strong style="color:var(--text2)">ZIP Gabungan:</strong> Folder ZIP berisi: <code>fasilitas_aktivitas.geojson</code>, <code>area_bahaya.geojson</code>, folder <code>layers/</code> (GeoJSON per file), folder <code>geotiff/</code> (file TIF), dan <code>k3_styles.json</code> (warna &amp; pengaturan).'
+};
+const FMT_BTN = {
+  geojson: '⬇️ Export GeoJSON',
+  html: '📄 Export HTML Snapshot',
+  zip: '📦 Export ZIP'
+};
+
+function toggleExportFmtPanel() {
+  exportFmtPanelOpen = !exportFmtPanelOpen;
+  const panel = document.getElementById('export-fmt-panel');
+  const arrow = document.getElementById('exp-fmt-arrow');
+  if (exportFmtPanelOpen) {
+    panel.style.maxHeight = '220px';
+    arrow.classList.add('open');
+  } else {
+    panel.style.maxHeight = '0';
+    arrow.classList.remove('open');
+  }
+}
+
+function selectExportFmt(fmt) {
+  currentExportFmt = fmt;
+  document.querySelectorAll('.exp-fmt-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('efmt-' + fmt);
+  if (btn) btn.classList.add('active');
+  const desc = document.getElementById('exp-fmt-desc');
+  if (desc) desc.innerHTML = FMT_DESC[fmt];
+  const mainBtn = document.getElementById('export-main-btn');
+  if (mainBtn) mainBtn.textContent = FMT_BTN[fmt];
+  const badge = document.getElementById('exp-fmt-badge');
+  if (badge) badge.textContent = fmt.toUpperCase();
+}
+
+function doExportSelected() {
+  if (currentExportFmt === 'geojson') doExportGeoJSON();
+  else if (currentExportFmt === 'html') saveAsHTML();
+  else if (currentExportFmt === 'zip') doExportZIP();
+}
+
+// Legacy compat — called by old button references
+function doExport() { doExportGeoJSON(); }
+
+// ─── GeoJSON Export ───────────────────────────────────────────
+function doExportGeoJSON() {
+  const filename = (document.getElementById('export-filename').value.trim() || 'K3_HIRARC_ATP_IPB');
+  const incFac    = document.getElementById('exp-include-fac').checked;
+  const incDz     = document.getElementById('exp-include-dz').checked;
+  const incLayers = document.getElementById('exp-include-layers').checked;
+
+  const features = [];
   if (incFac) {
-    facilities.filter(f=>f.lat).forEach(f => {
+    facilities.filter(f => f.lat).forEach(f => {
       features.push({
-        type:'Feature',
-        geometry:{type:'Point',coordinates:[f.lng,f.lat]},
-        properties:{
-          type:'facility', name:f.name, description:f.desc||'',
-          risk_level:facLevel(f),
-          max_risk_index:f.activities.length?Math.max(...f.activities.map(a=>a.ri)):0,
-          activity_count:f.activities.length,
-          linked_geojson_idx:linkMap[f.id]??null,
-          activities:f.activities.map(a=>({
-            name:a.name,hazard:a.hazard,likelihood:a.l,severity:a.s,
-            risk_index:a.ri,risk_level:a.level,recommendation:a.rec
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [f.lng, f.lat] },
+        properties: {
+          type: 'facility', name: f.name, description: f.desc || '',
+          risk_level: facLevel(f),
+          max_risk_index: f.activities.length ? Math.max(...f.activities.map(a => a.ri)) : 0,
+          activity_count: f.activities.length,
+          linked_geojson_idx: linkMap[f.id] ?? null,
+          activities: f.activities.map(a => ({
+            name: a.name, hazard: a.hazard, likelihood: a.l, severity: a.s,
+            risk_index: a.ri, risk_level: a.level, recommendation: a.rec
           }))
         }
       });
@@ -2198,22 +2400,557 @@ function doExport() {
   if (incDz) {
     dangerZones.forEach(dz => {
       features.push({
-        type:'Feature',
-        geometry:{type:'Point',coordinates:[dz.lng,dz.lat]},
-        properties:{
-          type:'danger_zone', name:dz.name, description:dz.desc||'',
-          risk_level:dz.level, hazard_type:dz.type, radius_m:dz.radius,
-          linked_geojson_idx:linkMap['dz_'+dz.id]??null
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [dz.lng, dz.lat] },
+        properties: {
+          type: 'danger_zone', name: dz.name, description: dz.desc || '',
+          risk_level: dz.level, hazard_type: dz.type, radius_m: dz.radius,
+          linked_geojson_idx: linkMap['dz_' + dz.id] ?? null
         }
       });
     });
   }
-  const gj={type:'FeatureCollection',features};
-  const blob=new Blob([JSON.stringify(gj,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download=filename+'.geojson'; a.click();
+
+  const gj = {
+    type: 'FeatureCollection',
+    _k3_metadata: {
+      exportedAt: new Date().toISOString(),
+      styleMap: geojsonStyleMap,
+      riskColors: RC
+    },
+    features
+  };
+
+  downloadBlob(JSON.stringify(gj, null, 2), filename + '.geojson', 'application/json');
+
+  // Also download each loaded GeoJSON layer as a separate file
+  if (incLayers) {
+    Object.entries(geojsonRawData).forEach(([fid, d]) => {
+      try {
+        const layerData = JSON.parse(d.text);
+        layerData._k3_metadata = { style: geojsonStyleMap[fid] || null, source: d.name, riskColors: RC };
+        downloadBlob(JSON.stringify(layerData, null, 2), d.name, 'application/json');
+      } catch(e) { console.warn('Layer export error:', e); }
+    });
+  }
+
   closeModal('modal-export');
-  showToast(`⬇️ File "${filename}.geojson" diunduh`);
+  showToast(`⬇️ GeoJSON "${filename}.geojson" diunduh`);
+}
+
+// ─── HTML Snapshot Export ─────────────────────────────────────
+function buildSnapshot() {
+  const incFac    = document.getElementById('exp-include-fac')?.checked !== false;
+  const incDz     = document.getElementById('exp-include-dz')?.checked !== false;
+  const incLayers = document.getElementById('exp-include-layers')?.checked !== false;
+  const incTif    = document.getElementById('exp-include-tif')?.checked !== false;
+
+  return {
+    version: '2.1',
+    timestamp: new Date().toISOString(),
+    facilities:      incFac    ? facilities    : [],
+    dangerZones:     incDz     ? dangerZones   : [],
+    linkMap:         (incFac || incDz) ? linkMap : {},
+    geojsonStyleMap, markerSizes,
+    basemap: document.getElementById('basemap-select')?.value || 'osm',
+    geojsonFiles: incLayers ? Object.entries(geojsonRawData).map(([fid, d]) => ({
+      fileId: fid, name: d.name, text: d.text, style: geojsonStyleMap[fid] || null
+    })) : [],
+    tifFiles: incTif ? tifRawBuffers.map(t => ({
+      name: t.name, size: t.size,
+      data: arrayBufferToBase64(t.buf)
+    })) : []
+  };
+}
+
+function saveAsHTML() {
+  showToast('⏳ Menyiapkan HTML snapshot...');
+  const snapshot = buildSnapshot();
+  const snapshotJson = JSON.stringify(snapshot);
+
+  // Parse current document to a clean copy
+  const freshDoc = new DOMParser().parseFromString(document.documentElement.outerHTML, 'text/html');
+
+  // Remove Leaflet's dynamic content (tiles, markers, SVG) — keep static structure
+  freshDoc.querySelectorAll('.leaflet-container').forEach(el => el.innerHTML = '');
+
+  // Remove any previous embedded snapshot
+  freshDoc.querySelectorAll('#k3-snapshot-data').forEach(el => el.remove());
+
+  // Inject snapshot data
+  const scriptEl = freshDoc.createElement('script');
+  scriptEl.id = 'k3-snapshot-data';
+  scriptEl.type = 'application/json';
+  scriptEl.textContent = snapshotJson;
+  freshDoc.body.appendChild(scriptEl);
+
+  const html = '<!DOCTYPE html>\n' + freshDoc.documentElement.outerHTML;
+  const filename = (document.getElementById('export-filename').value.trim() || 'K3_Map_Snapshot');
+  downloadBlob(html, filename + '.html', 'text/html;charset=utf-8');
+  closeModal('modal-export');
+  showToast('📄 HTML snapshot berhasil diunduh!');
+}
+
+// ─── ZIP Export ───────────────────────────────────────────────
+async function doExportZIP() {
+  if (typeof JSZip === 'undefined') {
+    showToast('❌ JSZip tidak tersedia — periksa koneksi internet'); return;
+  }
+  const filename  = (document.getElementById('export-filename').value.trim() || 'K3_HIRARC');
+  const incFac    = document.getElementById('exp-include-fac').checked;
+  const incDz     = document.getElementById('exp-include-dz').checked;
+  const incLayers = document.getElementById('exp-include-layers').checked;
+  const incTif    = document.getElementById('exp-include-tif').checked;
+
+  showToast('⏳ Membuat ZIP...');
+  const zip = new JSZip();
+
+  // Fasilitas
+  if (incFac) {
+    const facFeatures = facilities.filter(f => f.lat).map(f => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [f.lng, f.lat] },
+      properties: {
+        type: 'facility', name: f.name, description: f.desc || '',
+        risk_level: facLevel(f),
+        activities: JSON.stringify(f.activities.map(a => ({
+          name: a.name, hazard: a.hazard, l: a.l, s: a.s, ri: a.ri, level: a.level
+        })))
+      }
+    }));
+    zip.file('fasilitas_aktivitas.geojson', JSON.stringify({
+      type: 'FeatureCollection',
+      _k3_metadata: { styleMap: geojsonStyleMap, riskColors: RC },
+      features: facFeatures
+    }, null, 2));
+  }
+
+  // Area Bahaya
+  if (incDz) {
+    const dzFeatures = dangerZones.map(dz => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [dz.lng, dz.lat] },
+      properties: {
+        type: 'danger_zone', name: dz.name, description: dz.desc || '',
+        risk_level: dz.level, hazard_type: dz.type, radius_m: dz.radius
+      }
+    }));
+    zip.file('area_bahaya.geojson', JSON.stringify({
+      type: 'FeatureCollection', features: dzFeatures
+    }, null, 2));
+  }
+
+  // GeoJSON Layers
+  if (incLayers) {
+    const layersFolder = zip.folder('layers');
+    Object.entries(geojsonRawData).forEach(([fid, d]) => {
+      try {
+        const data = JSON.parse(d.text);
+        data._k3_metadata = { style: geojsonStyleMap[fid] || null, riskColors: RC };
+        layersFolder.file(d.name, JSON.stringify(data, null, 2));
+      } catch(e) {}
+    });
+  }
+
+  // GeoTIFF
+  if (incTif && tifRawBuffers.length) {
+    const tifFolder = zip.folder('geotiff');
+    tifRawBuffers.forEach(t => tifFolder.file(t.name, t.buf));
+  }
+
+  // Styles JSON
+  zip.file('k3_styles.json', JSON.stringify({
+    geojsonStyleMap, markerSizes,
+    riskColors: RC,
+    exportedAt: new Date().toISOString()
+  }, null, 2));
+
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename + '.zip'; a.click();
+  URL.revokeObjectURL(url);
+  closeModal('modal-export');
+  showToast(`📦 "${filename}.zip" berhasil diunduh!`);
+}
+
+// ─── Save Progress as JSON ─────────────────────────────────────
+function exportProgress() {
+  const data = {
+    version: '2.1',
+    facilities, dangerZones, linkMap, geojsonStyleMap, markerSizes,
+    geojsonFiles: Object.entries(geojsonRawData).map(([fid, d]) => ({
+      fileId: fid, name: d.name, text: d.text, style: geojsonStyleMap[fid] || null
+    }))
+  };
+  const filename = (document.getElementById('export-filename').value.trim() || 'K3_Progress');
+  downloadBlob(JSON.stringify(data, null, 2), filename + '.json', 'application/json');
+  showToast('💾 Progres disimpan sebagai JSON');
+}
+
+// ─── Import from HTML or JSON ─────────────────────────────────
+function importHTMLProgress(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const content = e.target.result;
+    // Try HTML snapshot first
+    const match = content.match(/<script[^>]+id="k3-snapshot-data"[^>]*>([\s\S]*?)<\/script>/);
+    if (match) {
+      try {
+        restoreFromSnapshot(JSON.parse(match[1]));
+      } catch(err) { showToast('❌ Gagal parse snapshot HTML: ' + err.message); }
+    } else {
+      // Try JSON
+      try {
+        restoreFromSnapshot(JSON.parse(content));
+      } catch(err) { showToast('❌ Format file tidak dikenali (.html atau .json)'); }
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// Legacy compat
+function importProgress(event) { importHTMLProgress(event); }
+
+// ─── Restore from snapshot ────────────────────────────────────
+async function restoreFromSnapshot(snapshot) {
+  if (!snapshot) return;
+  showToast('⏳ Memulihkan data...');
+
+  if (snapshot.facilities)      facilities  = snapshot.facilities;
+  if (snapshot.dangerZones)     dangerZones = snapshot.dangerZones;
+  if (snapshot.linkMap)         linkMap     = snapshot.linkMap;
+  if (snapshot.geojsonStyleMap) Object.assign(geojsonStyleMap, snapshot.geojsonStyleMap);
+  if (snapshot.markerSizes)     Object.assign(markerSizes, snapshot.markerSizes);
+
+  localStorage.setItem('k3_fac',  JSON.stringify(facilities));
+  localStorage.setItem('k3_dz',   JSON.stringify(dangerZones));
+  localStorage.setItem('k3_links',JSON.stringify(linkMap));
+
+  // Restore basemap
+  if (snapshot.basemap) {
+    const sel = document.getElementById('basemap-select');
+    if (sel && sel.value !== snapshot.basemap) {
+      sel.value = snapshot.basemap; changeBasemap(snapshot.basemap);
+    }
+  }
+
+  // Clear existing GeoJSON
+  allGeojsonFeatures = []; geojsonFeatures = [];
+  geojsonRawData = {};
+  geojsonLyr.clearLayers();
+  loadedFiles = loadedFiles.filter(f => f.type !== 'geojson');
+
+  // Restore GeoJSON files
+  if (snapshot.geojsonFiles && snapshot.geojsonFiles.length) {
+    for (const f of snapshot.geojsonFiles) {
+      try {
+        if (f.style && f.fileId) geojsonStyleMap[f.fileId] = f.style;
+        const blob = new Blob([f.text], { type: 'application/json' });
+        const syntheticFile = new File([blob], f.name || 'layer.geojson');
+        processGeoJSONFile(syntheticFile, f.fileId);
+      } catch(e) { console.error('GeoJSON restore error:', e); }
+    }
+  }
+
+  // Restore GeoTIFF files (async, large)
+  if (snapshot.tifFiles && snapshot.tifFiles.length) {
+    for (const tf of snapshot.tifFiles) {
+      if (!tf.data) continue;
+      try {
+        const buf = base64ToArrayBuffer(tf.data);
+        await processGeoTIF({ name: tf.name, size: tf.size || buf.byteLength, buf });
+      } catch(e) { console.error('TIF restore error:', e); }
+    }
+  }
+
+  renderAll();
+  renderFileLists();
+  showToast('✅ Data berhasil dipulihkan!');
+}
+
+// ─── Helper: download blob ────────────────────────────────────
+function downloadBlob(content, filename, mimeType) {
+  const blob = typeof content === 'string'
+    ? new Blob([content], { type: mimeType })
+    : new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ─── Helper: ArrayBuffer ↔ Base64 ─────────────────────────────
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
+}
+function base64ToArrayBuffer(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+// ═══════════════════════════════════════════════════════
+// FIREBASE REAL-TIME SYNC
+// ═══════════════════════════════════════════════════════
+function generateRoomCode() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const code = Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  const el = document.getElementById('sync-room-code');
+  if (el) el.value = 'k3-' + code;
+}
+
+function connectSync() {
+  const url      = document.getElementById('sync-fb-url').value.trim();
+  const apiKey   = document.getElementById('sync-fb-apikey').value.trim();
+  const projId   = document.getElementById('sync-fb-projectid').value.trim();
+  const roomCode = document.getElementById('sync-room-code').value.trim();
+
+  if (!url || !apiKey || !projId || !roomCode) {
+    showToast('⚠️ Lengkapi semua field sinkronisasi'); return;
+  }
+
+  const config = { apiKey, databaseURL: url, projectId: projId };
+  localStorage.setItem('k3_firebase', JSON.stringify(config));
+  localStorage.setItem('k3_room', roomCode);
+
+  initFirebaseSync();
+  closeModal('modal-sync');
+}
+
+function initFirebaseSync() {
+  const conf = JSON.parse(localStorage.getItem('k3_firebase') || 'null');
+  const room = localStorage.getItem('k3_room') || '';
+  if (!conf || !room) { updateSyncBadge(false); return; }
+  if (typeof firebase === 'undefined') { showToast('⚠️ Firebase SDK belum termuat'); return; }
+
+  try {
+    if (!firebase.apps || !firebase.apps.length) {
+      firebase.initializeApp(conf);
+    }
+    fbDb = firebase.database();
+    fbRoomRef = fbDb.ref('k3rooms/' + room);
+
+    // Listen for remote changes
+    fbRoomRef.on('value', snapshot => {
+      if (fbIgnoreNext) { fbIgnoreNext = false; return; }
+      const data = snapshot.val();
+      if (!data || !data._ts) return;
+      applyCloudData(data);
+    }, err => {
+      showToast('❌ Firebase error: ' + err.message);
+      updateSyncBadge(false);
+    });
+
+    fbSyncEnabled = true;
+    updateSyncBadge(true);
+    // Restore sync inputs
+    const el_url  = document.getElementById('sync-fb-url');
+    const el_key  = document.getElementById('sync-fb-apikey');
+    const el_proj = document.getElementById('sync-fb-projectid');
+    const el_room = document.getElementById('sync-room-code');
+    if (el_url)  el_url.value  = conf.databaseURL || '';
+    if (el_key)  el_key.value  = conf.apiKey || '';
+    if (el_proj) el_proj.value = conf.projectId || '';
+    if (el_room) el_room.value = room;
+
+    showToast('🔗 Sinkronisasi aktif · Room: ' + room);
+
+    // Update sync modal status
+    const banner = document.getElementById('sync-banner');
+    if (banner) {
+      banner.className = 'sync-status-banner on';
+      banner.textContent = '🔗 Terhubung · Room: ' + room + ' · Sinkronisasi aktif';
+    }
+  } catch(e) {
+    showToast('❌ Firebase error: ' + e.message);
+    updateSyncBadge(false);
+  }
+}
+
+function disconnectSync() {
+  if (fbRoomRef) fbRoomRef.off();
+  fbSyncEnabled = false; fbDb = null; fbRoomRef = null;
+  updateSyncBadge(false);
+  const banner = document.getElementById('sync-banner');
+  if (banner) { banner.className = 'sync-status-banner off'; banner.textContent = '🔌 Terputus · Perubahan hanya tersimpan lokal'; }
+  showToast('🔌 Sinkronisasi dinonaktifkan');
+}
+
+function pushToCloud() {
+  if (!fbSyncEnabled || !fbRoomRef) return;
+  fbIgnoreNext = true;
+
+  const gjFiles = Object.entries(geojsonRawData).map(([fid, d]) => ({
+    fileId: fid, name: d.name, text: d.text,
+    style: geojsonStyleMap[fid] || null
+  }));
+
+  const data = {
+    facilities:      JSON.stringify(facilities),
+    dangerZones:     JSON.stringify(dangerZones),
+    linkMap:         JSON.stringify(linkMap),
+    geojsonStyleMap: JSON.stringify(geojsonStyleMap),
+    markerSizes:     JSON.stringify(markerSizes),
+    basemap:         document.getElementById('basemap-select')?.value || 'osm',
+    geojsonFiles:    JSON.stringify(gjFiles),
+    _ts:             Date.now()
+  };
+
+  fbRoomRef.set(data).catch(e => {
+    fbIgnoreNext = false;
+    console.error('Firebase push error:', e);
+  });
+}
+
+function applyCloudData(data) {
+  let changed = false;
+  try {
+    if (data.facilities)  { facilities  = JSON.parse(data.facilities);  changed = true; }
+    if (data.dangerZones) { dangerZones = JSON.parse(data.dangerZones); changed = true; }
+    if (data.linkMap)     { linkMap     = JSON.parse(data.linkMap); }
+    if (data.geojsonStyleMap) Object.assign(geojsonStyleMap, JSON.parse(data.geojsonStyleMap));
+    if (data.markerSizes) Object.assign(markerSizes, JSON.parse(data.markerSizes));
+
+    // Save to localStorage
+    localStorage.setItem('k3_fac',   JSON.stringify(facilities));
+    localStorage.setItem('k3_dz',    JSON.stringify(dangerZones));
+    localStorage.setItem('k3_links', JSON.stringify(linkMap));
+
+    // Restore basemap
+    if (data.basemap) {
+      const sel = document.getElementById('basemap-select');
+      if (sel && sel.value !== data.basemap) {
+        sel.value = data.basemap; changeBasemap(data.basemap);
+      }
+    }
+
+    // Restore GeoJSON files (only add new ones not already loaded)
+    if (data.geojsonFiles) {
+      const remoteFiles = JSON.parse(data.geojsonFiles);
+      remoteFiles.forEach(rf => {
+        if (!loadedFiles.find(lf => lf.fileId === rf.fileId)) {
+          if (rf.style) geojsonStyleMap[rf.fileId] = rf.style;
+          const blob = new Blob([rf.text], { type: 'application/json' });
+          processGeoJSONFile(new File([blob], rf.name), rf.fileId);
+        }
+      });
+    }
+
+    if (changed) renderAll();
+  } catch(e) { console.error('applyCloudData error:', e); }
+}
+
+function updateSyncBadge(on) {
+  const btn = document.getElementById('sync-status-btn');
+  if (!btn) return;
+  if (on) {
+    btn.textContent = '🔗 Sync ON';
+    btn.classList.add('on');
+  } else {
+    btn.textContent = '🔌 Offline';
+    btn.classList.remove('on');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MAP PICKER MODAL
+// ═══════════════════════════════════════════════════════
+function openMapPicker(inputId, btnId) {
+  pickerTargetInput = inputId;
+  pickerTargetBtn   = btnId;
+  pickerSelectedCoord = null;
+
+  const coordSel = document.getElementById('picker-coord-selected');
+  const coordLiv = document.getElementById('picker-coord-live');
+  const confirmB = document.getElementById('picker-confirm-btn');
+  if (coordSel) coordSel.textContent = '';
+  if (coordLiv) coordLiv.textContent = 'Arahkan cursor ke peta';
+  if (confirmB) { confirmB.disabled = true; confirmB.style.opacity = '0.4'; }
+
+  openModal('modal-map-picker');
+
+  // Init picker map after modal animation
+  setTimeout(() => {
+    if (pickerMap) { try { pickerMap.remove(); } catch(e){} pickerMap = null; }
+    const pickerDiv = document.getElementById('picker-map');
+    if (!pickerDiv) return;
+    pickerDiv.innerHTML = '';
+
+    const center = map ? map.getCenter() : L.latLng(-6.552, 106.729);
+    const zoom   = map ? Math.min(map.getZoom(), 19) : 17;
+    const bmVal  = document.getElementById('basemap-select')?.value || 'osm';
+    const tileUrl = {
+      osm: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      topo: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'
+    }[bmVal] || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+    pickerMap = L.map('picker-map', { zoomControl: true, attributionControl: false }).setView(center, zoom);
+    L.tileLayer(tileUrl, { maxZoom: 21 }).addTo(pickerMap);
+
+    let pickerMarker = null;
+
+    pickerMap.on('mousemove', e => {
+      if (coordLiv) coordLiv.textContent = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+    });
+
+    pickerMap.on('click', e => {
+      const { lat, lng } = e.latlng;
+      pickerSelectedCoord = { lat, lng };
+      if (pickerMarker) pickerMap.removeLayer(pickerMarker);
+      pickerMarker = L.marker([lat, lng]).addTo(pickerMap);
+      if (coordSel) coordSel.textContent = `✅ ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      if (confirmB) { confirmB.disabled = false; confirmB.style.opacity = '1'; }
+    });
+
+    // Pre-fill if input has existing coords
+    const existing = document.getElementById(inputId)?.value;
+    if (existing) {
+      const p = existing.split(',').map(v => parseFloat(v.trim()));
+      if (p.length === 2 && !isNaN(p[0]) && !isNaN(p[1])) {
+        pickerSelectedCoord = { lat: p[0], lng: p[1] };
+        pickerMarker = L.marker([p[0], p[1]]).addTo(pickerMap);
+        pickerMap.setView([p[0], p[1]], zoom);
+        if (coordSel) coordSel.textContent = `📍 ${p[0].toFixed(6)}, ${p[1].toFixed(6)}`;
+        if (confirmB) { confirmB.disabled = false; confirmB.style.opacity = '1'; }
+      }
+    }
+
+    pickerMap.invalidateSize();
+  }, 150);
+}
+
+function closeMapPicker() {
+  if (pickerMap) { try { pickerMap.remove(); } catch(e){} pickerMap = null; }
+  pickerSelectedCoord = null;
+  closeModal('modal-map-picker');
+}
+
+function confirmMapPicker() {
+  if (!pickerSelectedCoord) return;
+  const { lat, lng } = pickerSelectedCoord;
+  const val = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  if (pickerTargetInput) {
+    const el = document.getElementById(pickerTargetInput);
+    if (el) el.value = val;
+  }
+  if (pickerTargetBtn) {
+    const btn = document.getElementById(pickerTargetBtn);
+    if (btn) btn.textContent = '✅ Dipilih';
+  }
+  showToast(`📍 Koordinat dipilih: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+  closeMapPicker();
 }
  
 // ═══════════════════════════════════════════════════════
