@@ -506,6 +506,19 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
 .storage-usage-bar{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:4px;}
 .sub-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--brand),var(--accent));}
 
+
+/* ── MULTI-HAZARD ENTRY ── */
+.hazard-entry{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;background:var(--bg2);}
+.hazard-entry-header{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);}
+.hazard-entry-num{width:22px;height:22px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;font-family:var(--mono);flex-shrink:0;}
+.hazard-entry-ri{font-size:10px;font-weight:700;font-family:var(--mono);}
+.hazard-entry-del{width:22px;height:22px;border-radius:50%;border:1px solid var(--extreme);background:var(--extreme-bg);color:var(--extreme);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;flex-shrink:0;font-family:var(--font);line-height:1;}
+.hazard-entry-body{padding:12px;}
+.hazard-detail-card{background:var(--bg2);border:1px solid;border-radius:6px;padding:9px;margin-bottom:6px;}
+.hazard-detail-card:last-child{margin-bottom:0;}
+.hazard-detail-header{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
+.hazard-num-circle{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;font-family:var(--mono);flex-shrink:0;}
+
 </style>
 </head>
 <body>
@@ -777,7 +790,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
         <div class="tc-icon" style="background:rgba(31,111,235,.15);border:1.5px solid var(--brand)">📋</div>
         <div class="tc-body">
           <div class="tc-title">Aktivitas HIRARC</div>
-          <div class="tc-desc">Tambahkan penilaian risiko K3 pada aktivitas kerja di sebuah fasilitas.</div>
+          <div class="tc-desc">Tambahkan aktivitas dengan beberapa bahaya, efek, penilaian risiko, dan saran pengendalian.</div>
         </div>
         <div class="tc-arrow">›</div>
       </div>
@@ -866,59 +879,23 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
           <label class="form-label">Jumlah Pekerja</label>
           <input type="text" class="form-input" id="fa-workers" placeholder="mis. 2-3 orang">
         </div>
-        <div class="form-group">
-          <label class="form-label">Kategori Bahaya</label>
-          <select class="form-select" id="fa-hazcat">
-            <option value="">Pilih...</option>
-            <option>Fisik</option><option>Kimia</option><option>Biologi</option>
-            <option>Mekanik</option><option>Ergonomi</option><option>Listrik</option><option>Psikososial</option>
-          </select>
-        </div>
-        <div class="form-group span2">
-          <label class="form-label">Identifikasi Bahaya *</label>
-          <textarea class="form-textarea" id="fa-hazard" rows="2" placeholder="Deskripsi potensi bahaya..."></textarea>
-        </div>
-        <div class="form-group span2">
-          <label class="form-label">Efek / Dampak Bahaya</label>
-          <textarea class="form-textarea" id="fa-effect" rows="2" placeholder="Dampak jika insiden terjadi..."></textarea>
-        </div>
       </div>
-      <div class="form-section-title" style="margin-top:14px">Penilaian Risiko</div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label">Frekuensi / Likelihood (L)</label>
-          <div class="risk-slider-row">
-            <input type="range" class="form-slider" id="fa-l" min="1" max="5" value="1" oninput="calcRisk()">
-            <div class="risk-val" id="rv-l">1</div>
-          </div>
-          <div class="slider-labels"><span>Jarang</span><span>Kecil</span><span>Mungkin</span><span>Besar</span><span>Pasti</span></div>
-          <div id="l-desc" style="font-size:10px;color:var(--text3);margin-top:3px;font-style:italic"></div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Keparahan / Severity (S)</label>
-          <div class="risk-slider-row">
-            <input type="range" class="form-slider" id="fa-s" min="1" max="5" value="1" oninput="calcRisk()">
-            <div class="risk-val" id="rv-s">1</div>
-          </div>
-          <div class="slider-labels"><span>Tdk Sig.</span><span>Kecil</span><span>Sedang</span><span>Berat</span><span>Bencana</span></div>
-          <div id="s-desc" style="font-size:10px;color:var(--text3);margin-top:3px;font-style:italic"></div>
-        </div>
+      <!-- ── MULTI-HAZARD SECTION ── -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:8px">
+        <div class="form-section-title" style="margin:0;border:none;padding:0;font-size:10px">🔴 Identifikasi Bahaya &amp; Penilaian Risiko</div>
+        <button type="button" class="pick-btn" onclick="addHazardEntry()" style="height:28px;font-size:10px;padding:0 12px">＋ Tambah Bahaya</button>
       </div>
-      <div class="risk-result-display" id="risk-display">
-        <div class="ri-score" id="ri-score" style="color:var(--low)">1</div>
-        <div class="ri-level" id="ri-level" style="color:var(--low)">● LOW RISK</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:3px">Risk Index = L × S = <span id="ri-formula">1×1</span></div>
-      </div>
-      <div class="form-section-title" style="margin-top:14px">Rekomendasi Pengendalian</div>
-      <div class="form-group">
-        <label class="form-label">Saran Pengendalian (Hierarchy of Control)</label>
-        <textarea class="form-textarea" id="fa-rec" rows="4" placeholder="Eliminasi: ...&#10;Substitusi: ...&#10;Rekayasa Teknik: ...&#10;Administratif: ...&#10;APD: ..."></textarea>
+      <div id="hazards-container"><div style="text-align:center;padding:14px;color:var(--text3);font-size:11px;border:1px dashed var(--border);border-radius:var(--radius)">Klik <strong style="color:var(--brand)">＋ Tambah Bahaya</strong> untuk menambahkan bahaya pertama</div></div>
+      <div class="risk-result-display" id="avg-risk-display" style="margin-top:6px">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Rata-rata Indeks Risiko Aktivitas</div>
+        <div class="ri-score" id="avg-ri-score" style="color:var(--text3)">—</div>
+        <div class="ri-level" id="avg-ri-level" style="color:var(--text3)">Belum ada bahaya ditambahkan</div>
       </div>
       <!-- Gemini -->
       <div class="gemini-section">
         <div class="gemini-header">
           <div class="gemini-icon">✦</div>
-          <div><div class="gemini-title">Rekomendasi Gemini AI</div><div style="font-size:9px;color:var(--text3)">Generate rekomendasi otomatis</div></div>
+          <div><div class="gemini-title">Rekomendasi Gemini AI</div><div style="font-size:9px;color:var(--text3)">Generate rekomendasi untuk semua bahaya</div></div>
         </div>
         <button class="gemini-btn" id="gem-rec-btn" onclick="genRec()"><span>✦</span> Generate Rekomendasi Pengendalian</button>
         <div class="gemini-result" id="gem-rec-out"></div>
@@ -1134,7 +1111,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
  
 <!-- DETAIL FASILITAS -->
 <div class="modal-overlay" id="modal-detail">
-  <div class="modal">
+  <div class="modal" style="width:min(95vw,760px)">
     <div class="modal-header">
       <div style="font-size:16px">🏭</div>
       <div class="modal-title" id="detail-title">Detail Fasilitas</div>
@@ -1447,21 +1424,58 @@ async function saveToStorage() {
 // ── DEMO DATA ────────────────────────────────────────────
 const DEMO_FAC = [
   {id:'f1',name:'Plant Factory',desc:'Fasilitas pertanian dalam ruangan berbasis teknologi hidroponik dan pencahayaan buatan',lat:-6.5515,lng:106.7285,activities:[
-    {id:'a1',name:'Operasional Plant Factory',desc:'Monitoring dan perawatan tanaman hidroponik di dalam plant factory berpendingin',workers:'2-3 orang',hazcat:'Fisik',hazard:'Fisik: Paparan suhu dingin dari sistem pendingin ruangan secara terus-menerus selama jam kerja',effect:'Hipotermia ringan, ketidaknyamanan kerja, penurunan produktivitas',l:2,s:2,ri:4,level:'low',rec:'Eliminasi: -\nSubstitusi: -\nRekayasa Teknik: Pengaturan suhu ruangan sesuai standar kenyamanan kerja\nAdministratif: Rotasi kerja; pembatasan waktu paparan\nAPD: Jaket atau pakaian hangat'},
-    {id:'a2',name:'Perawatan Lampu Grow Light',desc:'Pengecekan dan penggantian lampu grow light serta pemeliharaan pompa nutrisi',workers:'1-2 orang',hazcat:'Listrik',hazard:'Fisik: Risiko sengatan listrik saat merawat lampu dan komponen elektronik bertegangan tinggi',effect:'Sengatan listrik, luka bakar, atau kematian',l:2,s:4,ri:8,level:'medium',rec:'Eliminasi: -\nSubstitusi: -\nRekayasa Teknik: Circuit breaker; grounding; penutup konduktor\nAdministratif: SOP kelistrikan; lockout/tagout; pelatihan K3\nAPD: Sarung tangan isolator; alas kaki non-konduktor'}
+    {id:'a1',name:'Operasional Plant Factory',desc:'Monitoring dan perawatan tanaman hidroponik di dalam plant factory berpendingin',workers:'2-3 orang',
+     hazards:[
+       {id:'h1a1',hazcat:'Fisik',hazard:'Fisik: Paparan suhu dingin dari sistem pendingin ruangan secara terus-menerus selama jam kerja',effect:'Hipotermia ringan, ketidaknyamanan kerja, penurunan produktivitas',l:2,s:2,ri:4,rec:'Eliminasi: -\nSubstitusi: -\nRekayasa Teknik: Pengaturan suhu ruangan sesuai standar kenyamanan kerja\nAdministratif: Rotasi kerja; pembatasan waktu paparan\nAPD: Jaket atau pakaian hangat'},
+       {id:'h2a1',hazcat:'Ergonomi',hazard:'Ergonomi: Postur kerja berulang saat monitoring dan pengecekan tanaman secara manual',effect:'Nyeri punggung, kelelahan muskuloskeletal, gangguan postur',l:3,s:2,ri:6,rec:'Eliminasi: -\nSubstitusi: Sensor otomatis untuk monitoring\nRekayasa Teknik: Penyesuaian ketinggian rak tanam\nAdministratif: Rotasi tugas; micro-break tiap 30 menit\nAPD: Sepatu ergonomis; lumbar support belt'}
+     ],
+     ri:5,level:'medium'},
+    {id:'a2',name:'Perawatan Lampu Grow Light',desc:'Pengecekan dan penggantian lampu grow light serta pemeliharaan pompa nutrisi',workers:'1-2 orang',
+     hazards:[
+       {id:'h1a2',hazcat:'Listrik',hazard:'Fisik: Risiko sengatan listrik saat merawat lampu dan komponen elektronik bertegangan tinggi',effect:'Sengatan listrik, luka bakar, atau kematian',l:2,s:4,ri:8,rec:'Eliminasi: -\nSubstitusi: -\nRekayasa Teknik: Circuit breaker; grounding; penutup konduktor\nAdministratif: SOP kelistrikan; lockout/tagout; pelatihan K3\nAPD: Sarung tangan isolator; alas kaki non-konduktor'},
+       {id:'h2a2',hazcat:'Fisik',hazard:'Fisik: Terjatuh dari tangga saat mengganti lampu pada ketinggian rak atas',effect:'Cedera fisik, memar, patah tulang ringan',l:2,s:3,ri:6,rec:'Eliminasi: -\nSubstitusi: Tangga berstandar dengan pengaman\nRekayasa Teknik: Handrail; anti-slip tangga\nAdministratif: SOP kerja di ketinggian rendah; buddy system\nAPD: Helm ringan; sepatu anti-slip'}
+     ],
+     ri:7,level:'medium'}
   ]},
   {id:'f2',name:'GH Melon 1',desc:'Greenhouse produksi melon dengan sistem fertigasi dan pengendalian iklim',lat:-6.5520,lng:106.7292,activities:[
-    {id:'a3',name:'Pemanenan Buah Melon',desc:'Pemotongan buah melon menggunakan gunting tanaman di dalam greenhouse bersuhu 30–38°C',workers:'1-2 orang',hazcat:'Fisik',hazard:'Fisik: Paparan suhu panas dan kelembaban tinggi selama aktivitas pemanenan di greenhouse',effect:'Heat stress, dehidrasi, pusing, penurunan konsentrasi, pingsan',l:3,s:3,ri:9,level:'medium',rec:'Eliminasi: -\nSubstitusi: Jadwal pemanenan pagi atau sore hari\nRekayasa Teknik: Ventilasi tambahan; area istirahat berpendingin\nAdministratif: Istirahat wajib tiap 45 menit; monitoring kesehatan\nAPD: Pakaian ringan; topi; kacamata'},
-    {id:'a4',name:'Aplikasi OPT',desc:'Penyemprotan pestisida dan fungisida menggunakan knapsack sprayer di area greenhouse',workers:'1-2 orang',hazcat:'Kimia',hazard:'Kimia: Paparan pestisida melalui inhalasi, kontak kulit, dan mata selama proses penyemprotan',effect:'Iritasi pernapasan, mata, dan kulit; keracunan kronis',l:3,s:3,ri:9,level:'medium',rec:'Eliminasi: -\nSubstitusi: Pertimbangkan biopestisida\nRekayasa Teknik: Ventilasi; eyewash station\nAdministratif: SOP B3; MSDS tersedia\nAPD: Masker N95; kacamata; sarung tangan nitrile; apron'}
+    {id:'a3',name:'Pemanenan Buah Melon',desc:'Pemotongan buah melon menggunakan gunting tanaman di dalam greenhouse bersuhu 30–38°C',workers:'1-2 orang',
+     hazards:[
+       {id:'h1a3',hazcat:'Fisik',hazard:'Fisik: Paparan suhu panas dan kelembaban tinggi selama aktivitas pemanenan di greenhouse',effect:'Heat stress, dehidrasi, pusing, penurunan konsentrasi, pingsan',l:3,s:3,ri:9,rec:'Eliminasi: -\nSubstitusi: Jadwal pemanenan pagi atau sore hari\nRekayasa Teknik: Ventilasi tambahan; area istirahat berpendingin\nAdministratif: Istirahat wajib tiap 45 menit; monitoring kesehatan\nAPD: Pakaian ringan; topi; kacamata'},
+       {id:'h2a3',hazcat:'Fisik',hazard:'Fisik: Luka sayat akibat penggunaan gunting tanaman yang tajam saat memotong tangkai melon',effect:'Luka sayatan pada jari/telapak tangan, perdarahan, infeksi',l:2,s:3,ri:6,rec:'Eliminasi: -\nSubstitusi: Gunting ergonomis dengan pelindung jari\nRekayasa Teknik: -\nAdministratif: Pelatihan penggunaan alat; briefing K3\nAPD: Sarung tangan cut-resistant'},
+       {id:'h3a3',hazcat:'Ergonomi',hazard:'Ergonomi: Postur membungkuk berulang saat mengambil melon dan mengangkat keranjang panen',effect:'Nyeri punggung bawah, kelelahan otot, cedera muskuloskeletal',l:3,s:2,ri:6,rec:'Eliminasi: -\nSubstitusi: Troli angkut untuk keranjang besar\nRekayasa Teknik: Meja kerja ketinggian adjustable\nAdministratif: Penilaian ergonomi REBA; rotasi tugas\nAPD: Lumbar support belt'}
+     ],
+     ri:7,level:'medium'},
+    {id:'a4',name:'Aplikasi OPT',desc:'Penyemprotan pestisida dan fungisida menggunakan knapsack sprayer di area greenhouse',workers:'1-2 orang',
+     hazards:[
+       {id:'h1a4',hazcat:'Kimia',hazard:'Kimia: Paparan pestisida melalui inhalasi, kontak kulit, dan mata selama proses penyemprotan',effect:'Iritasi pernapasan, mata, dan kulit; keracunan kronis',l:3,s:3,ri:9,rec:'Eliminasi: -\nSubstitusi: Pertimbangkan biopestisida\nRekayasa Teknik: Ventilasi; eyewash station\nAdministratif: SOP B3; MSDS tersedia\nAPD: Masker N95; kacamata; sarung tangan nitrile; apron'},
+       {id:'h2a4',hazcat:'Fisik',hazard:'Fisik: Terpeleset pada jalur sempit greenhouse yang basah akibat tumpahan larutan semprot',effect:'Terjatuh, cedera fisik, memar, serta risiko terpapar bahan kimia akibat tumpahan',l:2,s:3,ri:6,rec:'Eliminasi: Segera bersihkan tumpahan\nSubstitusi: -\nRekayasa Teknik: Anti-slip pada jalur; wadah sekunder\nAdministratif: Inspeksi jalur sebelum bekerja\nAPD: Sepatu boot anti-slip'}
+     ],
+     ri:7.5,level:'medium'}
   ]},
   {id:'f3',name:'GH Aquaponik',desc:'Greenhouse sistem aquaponik integrasi budidaya ikan dan tanaman sayuran',lat:-6.5508,lng:106.7296,activities:[
-    {id:'a5',name:'Perbaikan Atap Greenhouse',desc:'Pemasangan dan perbaikan atap miring greenhouse yang berpotensi licin akibat lumut',workers:'3-6 orang',hazcat:'Fisik',hazard:'Fisik: Terjatuh dari ketinggian saat bekerja di atas atap miring yang berpotensi licin',effect:'Cedera parah, patah tulang, trauma kepala, kematian',l:3,s:5,ri:15,level:'high',rec:'Eliminasi: -\nSubstitusi: Scaffolding berstandar\nRekayasa Teknik: Safety net; anchor point harness; tangga berkait\nAdministratif: SOP kerja ketinggian; working at height permit\nAPD: Full-body harness; helm; sepatu anti-slip'}
+    {id:'a5',name:'Perbaikan Atap Greenhouse',desc:'Pemasangan dan perbaikan atap miring greenhouse yang berpotensi licin akibat lumut',workers:'3-6 orang',
+     hazards:[
+       {id:'h1a5',hazcat:'Fisik',hazard:'Fisik: Terjatuh dari ketinggian saat bekerja di atas atap miring yang berpotensi licin',effect:'Cedera parah, patah tulang, trauma kepala, kematian',l:3,s:5,ri:15,rec:'Eliminasi: -\nSubstitusi: Scaffolding berstandar\nRekayasa Teknik: Safety net; anchor point harness; tangga berkait\nAdministratif: SOP kerja ketinggian; working at height permit\nAPD: Full-body harness; helm; sepatu anti-slip'},
+       {id:'h2a5',hazcat:'Fisik',hazard:'Fisik: Terluka oleh alat pertukangan (palu, paku, gergaji) saat perbaikan struktur atap',effect:'Luka tusuk, luka sayatan, memar, cedera tangan dan jari',l:3,s:3,ri:9,rec:'Eliminasi: -\nSubstitusi: Alat dengan pelindung bawaan\nRekayasa Teknik: Tool belt; area kerja tertata\nAdministratif: Pelatihan alat; briefing K3; buddy system\nAPD: Sarung tangan tahan potong; helm; kacamata safety'}
+     ],
+     ri:12,level:'high'}
   ]},
   {id:'f4',name:'Kandang Kambing',desc:'Unit peternakan kambing untuk penelitian dan produksi',lat:-6.5530,lng:106.7300,activities:[
-    {id:'a6',name:'Pemberian Pakan & Air',desc:'Pemberian pakan hijauan dan air minum kepada kambing secara manual di kandang tertutup',workers:'1-2 orang',hazcat:'Biologi',hazard:'Biologi: Paparan gas amonia dari akumulasi kotoran ternak di kandang dengan ventilasi terbatas',effect:'Iritasi pernapasan, mata, kulit; gangguan pernapasan kronis',l:3,s:3,ri:9,level:'medium',rec:'Eliminasi: -\nSubstitusi: -\nRekayasa Teknik: Ventilasi; sensor amonia; pembersihan rutin\nAdministratif: Jadwal pembersihan; pemeriksaan kesehatan berkala\nAPD: Masker half-face; kacamata; sarung tangan; sepatu bot'}
+    {id:'a6',name:'Pemberian Pakan & Air',desc:'Pemberian pakan hijauan dan air minum kepada kambing secara manual di kandang tertutup',workers:'1-2 orang',
+     hazards:[
+       {id:'h1a6',hazcat:'Biologi',hazard:'Biologi: Paparan gas amonia dari akumulasi kotoran ternak di kandang dengan ventilasi terbatas',effect:'Iritasi pernapasan, mata, kulit; gangguan pernapasan kronis',l:3,s:3,ri:9,rec:'Eliminasi: -\nSubstitusi: -\nRekayasa Teknik: Ventilasi; sensor amonia; pembersihan rutin\nAdministratif: Jadwal pembersihan; pemeriksaan kesehatan berkala\nAPD: Masker half-face; kacamata; sarung tangan; sepatu bot'},
+       {id:'h2a6',hazcat:'Biologi',hazard:'Biologi: Kontak langsung dengan kambing — risiko gigitan, tendangan, atau penularan zoonosis',effect:'Luka memar, luka gigitan, serta risiko infeksi zoonosis (brucellosis, leptospirosis)',l:2,s:3,ri:6,rec:'Eliminasi: -\nSubstitusi: Feeding system mekanis untuk pakan cair\nRekayasa Teknik: Pagar pembatas area interaksi\nAdministratif: Pelatihan penanganan hewan; vaksinasi; P3K\nAPD: Sarung tangan karet; sepatu bot; pakaian tertutup'},
+       {id:'h3a6',hazcat:'Fisik',hazard:'Fisik: Manual handling mengangkut pakan rumput berat dalam karung secara berulang',effect:'Nyeri punggung, cedera otot, kelelahan fisik akibat pengangkatan berulang',l:3,s:2,ri:6,rec:'Eliminasi: -\nSubstitusi: Gerobak sorong atau troli pakan\nRekayasa Teknik: Penyimpanan pakan dekat kandang\nAdministratif: Batas berat angkat 25 kg; rotasi tugas\nAPD: Lumbar support belt; sarung tangan grip'}
+     ],
+     ri:7,level:'medium'}
   ]},
   {id:'f5',name:'Gudang & Drone',desc:'Gudang penyimpanan drone pertanian dan bahan kimia agri',lat:-6.5505,lng:106.7270,activities:[
-    {id:'a7',name:'Pengisian Baterai Drone',desc:'Pengisian baterai LiPo drone pertanian menggunakan generator fast charging di dalam gudang',workers:'1-2 orang',hazcat:'Fisik',hazard:'Fisik: Ledakan atau kebakaran baterai LiPo akibat overheat saat pengisian daya yang tidak terpantau',effect:'Luka bakar, kehilangan anggota tubuh, kebakaran fasilitas',l:1,s:5,ri:5,level:'medium',rec:'Eliminasi: -\nSubstitusi: Baterai dengan BMS overheat protection\nRekayasa Teknik: Smart charger cut-off; fireproof bag; APAR\nAdministratif: SOP pengisian; larangan meninggalkan tanpa pengawasan\nAPD: Sarung tangan tahan panas; kacamata'}
+    {id:'a7',name:'Pengisian Baterai Drone',desc:'Pengisian baterai LiPo drone pertanian menggunakan generator fast charging di dalam gudang',workers:'1-2 orang',
+     hazards:[
+       {id:'h1a7',hazcat:'Fisik',hazard:'Fisik: Ledakan atau kebakaran baterai LiPo akibat overheat saat pengisian daya yang tidak terpantau',effect:'Luka bakar, kehilangan anggota tubuh, kebakaran fasilitas',l:1,s:5,ri:5,rec:'Eliminasi: -\nSubstitusi: Baterai dengan BMS overheat protection\nRekayasa Teknik: Smart charger cut-off; fireproof bag; APAR\nAdministratif: SOP pengisian; larangan meninggalkan tanpa pengawasan\nAPD: Sarung tangan tahan panas; kacamata'},
+       {id:'h2a7',hazcat:'Kimia',hazard:'Kimia: Paparan sisa bahan kimia pestisida dari tangki drone yang bocor saat proses pengisian',effect:'Iritasi kulit, mata, dan saluran pernapasan akibat kontak bahan kimia pertanian',l:2,s:3,ri:6,rec:'Eliminasi: Periksa tangki sebelum masuk gudang\nSubstitusi: Wadah penyimpanan tangki di luar gudang\nRekayasa Teknik: Eyewash station; ventilasi gudang\nAdministratif: SOP penanganan tumpahan; MSDS tersedia\nAPD: Masker N95; sarung tangan nitrile; kacamata goggle'}
+     ],
+     ri:5.5,level:'medium'}
   ]}
 ];
 const DEMO_DZ = [
@@ -1677,9 +1691,29 @@ function canAddDangerZone() {
   return true;
 }
  
+function migrateActivity(act) {
+  if (act.hazards && act.hazards.length > 0) return act;
+  act.hazards = [{
+    id: 'h_' + (act.id || Date.now()),
+    hazcat: act.hazcat || '',
+    hazard: act.hazard || '',
+    effect: act.effect || '',
+    l: act.l || 1,
+    s: act.s || 1,
+    ri: act.ri || 1,
+    rec: act.rec || ''
+  }];
+  return act;
+}
+function activityRi(act) {
+  const hz = act.hazards || [];
+  if (!hz.length) return act.ri || 0;
+  return hz.reduce((s,h) => s + (h.l||1)*(h.s||1), 0) / hz.length;
+}
 function facLevel(fac) {
   if (!fac.activities||!fac.activities.length) return 'none';
-  return rL(Math.max(...fac.activities.map(a=>a.ri)));
+  const ris = fac.activities.map(a => activityRi(migrateActivity({...a})));
+  return rL(ris.reduce((s,r)=>s+r,0)/ris.length);
 }
  
 function renderMarkers() {
@@ -1704,14 +1738,17 @@ function renderMarkers() {
 function buildFacPopup(f) {
   const lvl = facLevel(f);
   const col = lvl==='none' ? '#6e7681' : RC[lvl];
-  const maxRi = f.activities.length ? Math.max(...f.activities.map(a=>a.ri)) : 0;
-  const avgRi = f.activities.length ? (f.activities.reduce((s,a)=>s+a.ri,0)/f.activities.length).toFixed(1) : '—';
+  const actRis = f.activities.map(a=>activityRi(migrateActivity({...a})));
+  const facAvgRi = actRis.length ? Math.round(actRis.reduce((s,r)=>s+r,0)/actRis.length*10)/10 : 0;
+  const maxActRi = actRis.length ? Math.round(Math.max(...actRis)*10)/10 : 0;
   const acts = f.activities.slice(0,5).map(a => {
-    const c = RC[rL(a.ri)];
+    const m=migrateActivity({...a}); const ar=Math.round(activityRi(m)*10)/10; const c=RC[rL(ar)];
+    const hc=(m.hazards||[]).length;
     return `<div class="popup-act-item" onclick="showFacDetail('${f.id}')">
       <div class="act-risk-dot" style="background:${c}"></div>
       <span style="flex:1">${a.name}</span>
-      <span style="font-size:10px;font-family:var(--mono);color:${c}">${a.ri}</span>
+      <span style="font-size:9px;color:var(--text3);margin-right:3px">${hc}⚠</span>
+      <span style="font-size:10px;font-family:var(--mono);color:${c}">${ar}</span>
     </div>`;
   }).join('');
   const noAct = lvl==='none' ? '<div style="font-size:11px;color:var(--text3);text-align:center;padding:6px">Belum ada aktivitas tercatat dalam fasilitas</div>' : '';
@@ -1723,11 +1760,11 @@ function buildFacPopup(f) {
     ${linked}
     <div class="popup-stat-row">
       <div class="popup-stat"><div class="num">${f.activities.length}</div><div class="lbl">Aktivitas</div></div>
-      <div class="popup-stat"><div class="num" style="color:${col}">${maxRi||'—'}</div><div class="lbl">Risk Max</div></div>
-      <div class="popup-stat"><div class="num">${avgRi}</div><div class="lbl">Rata-rata</div></div>
+      <div class="popup-stat"><div class="num" style="color:${col}">${facAvgRi||'—'}</div><div class="lbl">RI Rata-rata</div></div>
+      <div class="popup-stat"><div class="num" style="color:${maxActRi?RC[rL(maxActRi)]:'#888'}">${maxActRi||'—'}</div><div class="lbl">RI Maks</div></div>
     </div>
     ${noAct}
-    ${acts.length ? `<div><div class="popup-act-title">Aktivitas</div>${acts}</div>` : ''}
+    ${acts.length ? `<div><div class="popup-act-title">Aktivitas &amp; Jumlah Bahaya</div>${acts}</div>` : ''}
     <button class="popup-btn" onclick="showFacDetail('${f.id}')">📋 Detail HIRARC</button>
     <div class="popup-edit-row">
       <button class="popup-edit-btn" onclick="editFacility('${f.id}')">✏️ Edit</button>
@@ -1800,10 +1837,14 @@ function renderSidebar() {
       // Batasi tampilan aktivitas di sidebar ke 4 untuk performa
       const shownActs = f.activities.slice(0, 4);
       const acts = shownActs.map(a => {
-        const c = RC[rL(a.ri)];
+        const m = migrateActivity({...a});
+        const ar = Math.round(activityRi(m)*10)/10;
+        const c = RC[rL(ar)];
+        const hc = (m.hazards||[]).length;
         return `<div class="fac-act-item" onclick="showFacDetail('${f.id}')">
-          <div class="mini-dot" style="background:${c}"></div><span>${a.name}</span>
-          <span style="font-family:var(--mono);font-size:9px;color:${c};margin-left:auto">${a.ri}</span></div>`;
+          <div class="mini-dot" style="background:${c}"></div><span style="flex:1">${a.name}</span>
+          <span style="font-size:9px;color:var(--text3);margin-right:3px">${hc}⚠</span>
+          <span style="font-family:var(--mono);font-size:9px;color:${c}">${ar}</span></div>`;
       }).join('');
       const moreActs = f.activities.length > 4 ? `<div style="font-size:9px;color:var(--text3);padding:2px">+ ${f.activities.length-4} aktivitas lainnya...</div>` : '';
       const noAct = !f.activities.length ? '<div style="font-size:9px;color:var(--text3);padding:2px">Belum ada aktivitas tercatat dalam fasilitas</div>' : '';
@@ -1856,13 +1897,13 @@ function renderSidebar() {
 }
  
 function updateStats() {
-  const c = {low:0,medium:0,high:0,extreme:0};
-  facilities.forEach(f => { const l=facLevel(f); if(l!=='none') c[l]++; });
-  document.getElementById('ct').textContent = facilities.length;
-  document.getElementById('cl').textContent = c.low;
-  document.getElementById('cm').textContent = c.medium;
-  document.getElementById('ch').textContent = c.high;
-  document.getElementById('ce').textContent = c.extreme;
+  const c={low:0,medium:0,high:0,extreme:0};
+  facilities.forEach(f=>{const l=facLevel(f); if(l!=='none') c[l]++;});
+  document.getElementById('ct').textContent=facilities.length;
+  document.getElementById('cl').textContent=c.low;
+  document.getElementById('cm').textContent=c.medium;
+  document.getElementById('ch').textContent=c.high;
+  document.getElementById('ce').textContent=c.extreme;
 }
  
 // ═══════════════════════════════════════════════════════
@@ -1984,56 +2025,170 @@ function populateFacSelect(presel=null) {
 }
  
 function resetActForm() {
-  ['fa-name','fa-desc','fa-workers','fa-hazard','fa-effect','fa-rec'].forEach(id=>{document.getElementById(id).value='';});
-  document.getElementById('fa-hazcat').value='';
-  document.getElementById('fa-l').value=1;
-  document.getElementById('fa-s').value=1;
-  document.getElementById('gem-rec-out').textContent='';
-  document.getElementById('gem-rec-out').classList.remove('visible');
-  document.getElementById('gem-rec-btn').innerHTML='<span>✦</span> Generate Rekomendasi Pengendalian';
-  document.getElementById('gem-rec-btn').disabled=false;
-  calcRisk();
+  ['fa-name','fa-desc','fa-workers'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const container=document.getElementById('hazards-container');
+  if(container){container.innerHTML=''; addHazardEntry();}
+  const out=document.getElementById('gem-rec-out');
+  if(out){out.textContent=''; out.classList.remove('visible');}
+  const btn=document.getElementById('gem-rec-btn');
+  if(btn){btn.innerHTML='<span>✦</span> Generate Rekomendasi Pengendalian'; btn.disabled=false;}
+  updateAvgRisk();
 }
- 
+function addHazardEntry(data=null) {
+  const container=document.getElementById('hazards-container');
+  if(!container) return;
+  const idx=container.querySelectorAll('.hazard-entry').length;
+  const l=data?(data.l||1):1; const s=data?(data.s||1):1;
+  const ri=l*s; const lvl=rL(ri); const col=RC[lvl]||'#888';
+  const catOpts=['Fisik','Kimia','Biologi','Mekanik','Ergonomi','Listrik','Psikososial'];
+  const catSel=catOpts.map(c=>`<option${data?.hazcat===c?' selected':''}>${c}</option>`).join('');
+  const entry=document.createElement('div');
+  entry.className='hazard-entry'; entry.id='he-'+idx;
+  entry.innerHTML=`<div class="hazard-entry-header">
+    <div class="hazard-entry-num">${idx+1}</div>
+    <span style="font-size:11px;font-weight:700;color:var(--text)">Bahaya ${idx+1}</span>
+    <span style="flex:1"></span>
+    <div class="hazard-entry-ri" id="he-ri-${idx}" style="color:${col}">RI: ${ri} — ${rLbl(lvl)}</div>
+    ${idx>0?`<button type="button" class="hazard-entry-del" onclick="removeHazardEntry(${idx})">✕</button>`:''}
+  </div>
+  <div class="hazard-entry-body">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Kategori Bahaya</label>
+        <select class="form-select he-hazcat" id="he-hazcat-${idx}"><option value="">Pilih...</option>${catSel}</select>
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">Identifikasi Bahaya *</label>
+        <textarea class="form-textarea he-hazard" id="he-hazard-${idx}" rows="2" placeholder="Deskripsi potensi bahaya...">${data?.hazard||''}</textarea>
+      </div>
+      <div class="form-group span2">
+        <label class="form-label">Efek / Dampak Bahaya</label>
+        <textarea class="form-textarea he-effect" id="he-effect-${idx}" rows="2" placeholder="Dampak jika insiden terjadi...">${data?.effect||''}</textarea>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top:6px">
+      <div class="form-group">
+        <label class="form-label">Frekuensi / Likelihood (L)</label>
+        <div class="risk-slider-row">
+          <input type="range" class="form-slider he-l" id="he-l-${idx}" min="1" max="5" value="${l}" oninput="updateHazardRisk(${idx})">
+          <div class="risk-val he-rv-l" id="he-rv-l-${idx}" style="color:${col}">${l}</div>
+        </div>
+        <div class="slider-labels"><span>Jarang</span><span>Kecil</span><span>Mungkin</span><span>Besar</span><span>Pasti</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Keparahan / Severity (S)</label>
+        <div class="risk-slider-row">
+          <input type="range" class="form-slider he-s" id="he-s-${idx}" min="1" max="5" value="${s}" oninput="updateHazardRisk(${idx})">
+          <div class="risk-val he-rv-s" id="he-rv-s-${idx}" style="color:${col}">${s}</div>
+        </div>
+        <div class="slider-labels"><span>Tdk Sig.</span><span>Kecil</span><span>Sedang</span><span>Berat</span><span>Bencana</span></div>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:8px">
+      <label class="form-label">Saran Pengendalian Bahaya Ini (Hierarchy of Control)</label>
+      <textarea class="form-textarea he-rec" id="he-rec-${idx}" rows="3" placeholder="Eliminasi: ...&#10;Substitusi: ...&#10;Rekayasa Teknik: ...&#10;Administratif: ...&#10;APD: ...">${data?.rec||''}</textarea>
+    </div>
+  </div>`;
+  container.appendChild(entry);
+  updateAvgRisk();
+}
+function removeHazardEntry(targetIdx) {
+  const container=document.getElementById('hazards-container');
+  if(!container) return;
+  const entries=[...container.querySelectorAll('.hazard-entry')];
+  if(entries.length<=1){showToast('⚠️ Minimal satu bahaya harus ada');return;}
+  // Collect current data
+  const datas=entries.map((_,i)=>({
+    hazcat:document.getElementById('he-hazcat-'+i)?.value||'',
+    hazard:document.getElementById('he-hazard-'+i)?.value||'',
+    effect:document.getElementById('he-effect-'+i)?.value||'',
+    l:parseInt(document.getElementById('he-l-'+i)?.value||1),
+    s:parseInt(document.getElementById('he-s-'+i)?.value||1),
+    rec:document.getElementById('he-rec-'+i)?.value||''
+  }));
+  datas.splice(targetIdx,1);
+  container.innerHTML='';
+  datas.forEach(d=>addHazardEntry(d));
+}
+function updateHazardRisk(idx) {
+  const l=parseInt(document.getElementById('he-l-'+idx)?.value||1);
+  const s=parseInt(document.getElementById('he-s-'+idx)?.value||1);
+  const ri=l*s; const lvl=rL(ri); const col=RC[lvl]||'#888';
+  const rvl=document.getElementById('he-rv-l-'+idx);
+  const rvs=document.getElementById('he-rv-s-'+idx);
+  const rid=document.getElementById('he-ri-'+idx);
+  if(rvl){rvl.textContent=l; rvl.style.color=col;}
+  if(rvs){rvs.textContent=s; rvs.style.color=col;}
+  if(rid){rid.textContent='RI: '+ri+' — '+rLbl(lvl); rid.style.color=col;}
+  updateAvgRisk();
+}
+function updateAvgRisk() {
+  const container=document.getElementById('hazards-container');
+  if(!container) return;
+  const entries=container.querySelectorAll('.hazard-entry');
+  let total=0,count=0;
+  entries.forEach((_,i)=>{
+    const l=parseInt(document.getElementById('he-l-'+i)?.value||1);
+    const s=parseInt(document.getElementById('he-s-'+i)?.value||1);
+    total+=l*s; count++;
+  });
+  const avg=count>0?total/count:0;
+  const avgR=Math.round(avg*10)/10;
+  const lvl=count>0?rL(avg):'none';
+  const col=lvl==='none'?'#888':RC[lvl];
+  const sc=document.getElementById('avg-ri-score');
+  const lv=document.getElementById('avg-ri-level');
+  if(sc){sc.textContent=count>0?avgR:'—'; sc.style.color=col;}
+  if(lv){lv.textContent=count>0?('● '+rLbl(lvl)+' RISK  ('+count+' bahaya, rata-rata RI = '+avgR+')'):'Belum ada bahaya ditambahkan'; lv.style.color=col;}
+}
 function saveActivity() {
-  const facId = document.getElementById('fa-facility').value;
-  const name  = document.getElementById('fa-name').value.trim();
-  const hazard= document.getElementById('fa-hazard').value.trim();
-  if (!facId) { showToast('⚠️ Pilih fasilitas terlebih dahulu!'); return; }
-  if (!name)  { showToast('⚠️ Nama aktivitas wajib diisi!'); return; }
-  if (!hazard){ showToast('⚠️ Identifikasi bahaya wajib diisi!'); return; }
-  // Cek kapasitas aktivitas hanya saat tambah baru
-  const editActId = document.getElementById('fa-edit-act-id').value;
-  if (!editActId && !canAddActivity()) return;
-  const l = parseInt(document.getElementById('fa-l').value);
-  const s = parseInt(document.getElementById('fa-s').value);
-  const ri = l*s;
-  const act = {
-    id: document.getElementById('fa-edit-act-id').value || 'a'+Date.now(),
+  const facId=document.getElementById('fa-facility').value;
+  const name=document.getElementById('fa-name').value.trim();
+  if(!facId){showToast('⚠️ Pilih fasilitas terlebih dahulu!');return;}
+  if(!name){showToast('⚠️ Nama aktivitas wajib diisi!');return;}
+  const container=document.getElementById('hazards-container');
+  const entries=container?container.querySelectorAll('.hazard-entry'):[];
+  if(!entries.length){showToast('⚠️ Tambahkan minimal satu bahaya!');return;}
+  let hasHazard=false;
+  const hazards=[];
+  const editActId=document.getElementById('fa-edit-act-id').value;
+  entries.forEach((_,i)=>{
+    const hz=(document.getElementById('he-hazard-'+i)?.value||'').trim();
+    if(hz) hasHazard=true;
+    const l=parseInt(document.getElementById('he-l-'+i)?.value||1);
+    const s=parseInt(document.getElementById('he-s-'+i)?.value||1);
+    hazards.push({
+      id:'h'+i+'_'+(editActId||Date.now()),
+      hazcat:document.getElementById('he-hazcat-'+i)?.value||'',
+      hazard:hz,
+      effect:(document.getElementById('he-effect-'+i)?.value||'').trim(),
+      l,s,ri:l*s,
+      rec:(document.getElementById('he-rec-'+i)?.value||'').trim()
+    });
+  });
+  if(!hasHazard){showToast('⚠️ Identifikasi bahaya wajib diisi minimal satu!');return;}
+  if(!editActId&&!canAddActivity()) return;
+  const avgRi=hazards.reduce((s,h)=>s+h.ri,0)/hazards.length;
+  const act={
+    id:editActId||'a'+Date.now(),
     name, desc:document.getElementById('fa-desc').value.trim(),
     workers:document.getElementById('fa-workers').value.trim(),
-    hazcat:document.getElementById('fa-hazcat').value,
-    hazard, effect:document.getElementById('fa-effect').value.trim(),
-    l, s, ri, level:rL(ri),
-    rec:document.getElementById('fa-rec').value.trim()
+    hazards, ri:Math.round(avgRi*10)/10, level:rL(avgRi)
   };
-  const fac = facilities.find(f=>f.id===facId);
-  if (!fac) return;
-  if (editActId) {
-    const idx = fac.activities.findIndex(a=>a.id===editActId);
-    if (idx>=0) fac.activities[idx]=act;
-  } else {
-    fac.activities.push(act);
-  }
+  const fac=facilities.find(f=>f.id===facId);
+  if(!fac) return;
+  if(editActId){const idx=fac.activities.findIndex(a=>a.id===editActId);if(idx>=0)fac.activities[idx]=act;}
+  else fac.activities.push(act);
   save(); renderAll(); closeModal('modal-add-act');
-  showToast(`✅ Aktivitas "${name}" disimpan ke ${fac.name}`);
+  showToast(`✅ Aktivitas "${name}" (${hazards.length} bahaya) disimpan ke ${fac.name}`);
   flyToFac(fac.id);
 }
  
 function editActivityModal(facId, actId) {
   const fac=facilities.find(f=>f.id===facId);
-  const act=fac?.activities.find(a=>a.id===actId);
-  if (!act) return;
+  let rawAct=fac?.activities.find(a=>a.id===actId);
+  if(!rawAct) return;
+  const act=migrateActivity({...rawAct});
   closeModal('modal-detail');
   document.getElementById('modal-act-title').textContent='Edit Aktivitas HIRARC';
   document.getElementById('fa-edit-act-id').value=actId;
@@ -2042,15 +2197,15 @@ function editActivityModal(facId, actId) {
   document.getElementById('fa-name').value=act.name||'';
   document.getElementById('fa-desc').value=act.desc||'';
   document.getElementById('fa-workers').value=act.workers||'';
-  document.getElementById('fa-hazcat').value=act.hazcat||'';
-  document.getElementById('fa-hazard').value=act.hazard||'';
-  document.getElementById('fa-effect').value=act.effect||'';
-  document.getElementById('fa-l').value=act.l||1;
-  document.getElementById('fa-s').value=act.s||1;
-  document.getElementById('fa-rec').value=act.rec||'';
-  document.getElementById('gem-rec-out').textContent='';
-  document.getElementById('gem-rec-out').classList.remove('visible');
-  calcRisk();
+  const container=document.getElementById('hazards-container');
+  if(container){
+    container.innerHTML='';
+    (act.hazards||[]).forEach(h=>addHazardEntry(h));
+    if(!(act.hazards&&act.hazards.length)) addHazardEntry();
+  }
+  const out=document.getElementById('gem-rec-out');
+  if(out){out.textContent=''; out.classList.remove('visible');}
+  updateAvgRisk();
   openModal('modal-add-act');
 }
  
@@ -2137,20 +2292,9 @@ function deleteDZ(id) {
 }
  
 // ═══════════════════════════════════════════════════════
-// RISK CALCULATOR
+// RISK CALCULATOR  (multi-hazard mode — per-hazard via updateHazardRisk)
 // ═══════════════════════════════════════════════════════
-function calcRisk() {
-  const l=parseInt(document.getElementById('fa-l').value);
-  const s=parseInt(document.getElementById('fa-s').value);
-  const ri=l*s; const lvl=rL(ri); const col=RC[lvl]||'#888';
-  document.getElementById('rv-l').textContent=l; document.getElementById('rv-l').style.color=col;
-  document.getElementById('rv-s').textContent=s; document.getElementById('rv-s').style.color=col;
-  document.getElementById('ri-score').textContent=ri; document.getElementById('ri-score').style.color=col;
-  document.getElementById('ri-level').textContent='● '+rLbl(lvl)+' RISK'; document.getElementById('ri-level').style.color=col;
-  document.getElementById('ri-formula').textContent=`${l}×${s}`;
-  document.getElementById('l-desc').textContent=L_LABELS[l]+': '+L_DESC[l];
-  document.getElementById('s-desc').textContent=S_LABELS[s]+': '+S_DESC[s];
-}
+function calcRisk() { /* superseded by updateHazardRisk(idx) — kept for backward compat */ }
  
 // ═══════════════════════════════════════════════════════
 // DETAIL VIEW
@@ -2161,36 +2305,48 @@ function showFacDetail(id) {
   if (!fac) return;
   document.getElementById('detail-title').textContent=fac.name;
   const lvl=facLevel(fac); const col=lvl==='none'?'#6e7681':RC[lvl];
-  const maxRi=fac.activities.length?Math.max(...fac.activities.map(a=>a.ri)):0;
+  const actRis=fac.activities.map(a=>activityRi(migrateActivity({...a})));
+  const facAvgRi=actRis.length?Math.round(actRis.reduce((s,r)=>s+r,0)/actRis.length*10)/10:0;
   const linked = linkMap[id]!==undefined ?
     `<div style="font-size:10px;color:var(--brand);margin-top:4px">🔗 Terhubung ke fitur GeoJSON #${linkMap[id]}</div>` : '';
   let html=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px;background:var(--bg3);border-radius:var(--radius)">
-    <div style="font-size:26px;font-weight:900;font-family:var(--mono);color:${col}">${maxRi||'—'}</div>
+    <div style="font-size:26px;font-weight:900;font-family:var(--mono);color:${col}">${facAvgRi||'—'}</div>
     <div><div style="font-size:12px;font-weight:700;color:${col}">${rLbl(lvl)} RISK — ${fac.name}</div>
-    <div style="font-size:10px;color:var(--text3)">${fac.desc||''}${fac.desc?'<br>':''}${fac.activities.length} aktivitas · ${fac.lat?fac.lat.toFixed(5)+', '+fac.lng.toFixed(5):'—'}</div>
+    <div style="font-size:10px;color:var(--text3)">${fac.desc||''}${fac.desc?'<br>':''}${fac.activities.length} aktivitas · RI rata-rata ${facAvgRi} · ${fac.lat?fac.lat.toFixed(5)+', '+fac.lng.toFixed(5):'—'}</div>
     ${linked}</div></div>`;
   if (!fac.activities.length) {
     html+=`<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">Belum ada aktivitas tercatat dalam fasilitas ini.<br><button onclick="addActivityFor('${id}')" style="margin-top:8px;padding:6px 14px;border-radius:6px;background:var(--accent2);border:1px solid var(--accent);color:#fff;font-size:11px;cursor:pointer;font-family:var(--font)">＋ Tambah Aktivitas</button></div>`;
   } else {
-    fac.activities.forEach(a => {
-      const ac=RC[rL(a.ri)];
+    fac.activities.forEach(rawA => {
+      const a=migrateActivity({...rawA});
+      const ar=Math.round(activityRi(a)*10)/10; const ac=RC[rL(ar)]||'#888';
+      const hCount=(a.hazards||[]).length;
       html+=`<div class="detail-act">
         <div class="detail-act-header">
-          <div style="width:30px;height:30px;border-radius:50%;background:${ac}22;border:2px solid ${ac};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;font-family:var(--mono);color:${ac};flex-shrink:0">${a.ri}</div>
+          <div style="width:30px;height:30px;border-radius:50%;background:${ac}22;border:2px solid ${ac};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;font-family:var(--mono);color:${ac};flex-shrink:0">${ar}</div>
           <div><div class="detail-act-name">${a.name}</div>
-          <div style="font-size:9px;color:var(--text3)">${a.hazcat||'—'} · ${a.workers||'—'}</div></div>
-          <div style="margin-left:auto"><div class="popup-risk-badge badge-${rL(a.ri)}">${rLbl(rL(a.ri))}</div></div>
+          <div style="font-size:9px;color:var(--text3)">${a.workers||'—'} · ${hCount} bahaya · RI rata-rata ${ar}</div></div>
+          <div style="margin-left:auto"><div class="popup-risk-badge badge-${rL(ar)}">${rLbl(rL(ar))}</div></div>
         </div>
-        <div class="kv-grid">
-          ${a.desc?`<div class="kv-key">Deskripsi</div><div class="kv-val">${a.desc}</div>`:''}
-          <div class="kv-key">Bahaya</div><div class="kv-val">${a.hazard}</div>
-          <div class="kv-key">Efek</div><div class="kv-val">${a.effect||'—'}</div>
-          <div class="kv-key">Likelihood</div><div class="kv-val">${a.l} — ${L_LABELS[a.l]}</div>
-          <div class="kv-key">Severity</div><div class="kv-val">${a.s} — ${S_LABELS[a.s]}</div>
-          <div class="kv-key">Risk Index</div><div class="kv-val" style="color:${ac};font-weight:700">${a.ri} (${a.l}×${a.s})</div>
-          ${a.rec?`<div class="kv-key">Pengendalian</div><div class="kv-val" style="white-space:pre-wrap;line-height:1.6">${a.rec}</div>`:''}
-        </div>
-        <div class="act-action-row">
+        ${a.desc?`<div class="kv-grid" style="margin-bottom:8px"><div class="kv-key">Deskripsi</div><div class="kv-val">${a.desc}</div></div>`:''}
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding:3px 0;border-bottom:1px solid var(--border)">Daftar Bahaya (${hCount} bahaya teridentifikasi)</div>`;
+      (a.hazards||[]).forEach((h,hi)=>{
+        const hc=RC[rL(h.ri)]||'#888';
+        html+=`<div class="hazard-detail-card" style="border-color:${hc}44;background:var(--bg3)22">
+          <div class="hazard-detail-header">
+            <div class="hazard-num-circle" style="background:${hc}22;border:1.5px solid ${hc};color:${hc}">${hi+1}</div>
+            <div style="flex:1"><span style="font-size:10px;font-weight:700;color:${hc}">${h.hazcat||'Bahaya'}</span>
+            <span class="popup-risk-badge badge-${rL(h.ri)}" style="margin-left:5px;font-size:8px">RI ${h.ri} (${h.l}×${h.s}) — ${rLbl(rL(h.ri))}</span></div>
+          </div>
+          <div class="kv-grid">
+            <div class="kv-key">Bahaya</div><div class="kv-val">${h.hazard||'—'}</div>
+            <div class="kv-key">Efek</div><div class="kv-val">${h.effect||'—'}</div>
+            <div class="kv-key">Likelihood</div><div class="kv-val">${h.l} — ${L_LABELS[h.l]||''}  &nbsp;|&nbsp;  Severity: ${h.s} — ${S_LABELS[h.s]||''}</div>
+            ${h.rec?`<div class="kv-key">Pengendalian</div><div class="kv-val" style="white-space:pre-wrap;line-height:1.6;font-size:10px">${h.rec}</div>`:''}
+          </div>
+        </div>`;
+      });
+      html+=`<div class="act-action-row">
           <button class="act-btn" onclick="editActivityModal('${id}','${a.id}')">✏️ Edit</button>
           <button class="act-btn del" onclick="deleteActivity('${id}','${a.id}')">🗑 Hapus</button>
         </div>
@@ -2651,10 +2807,7 @@ function doExportGeoJSON() {
           max_risk_index: f.activities.length ? Math.max(...f.activities.map(a => a.ri)) : 0,
           activity_count: f.activities.length,
           linked_geojson_idx: linkMap[f.id] ?? null,
-          activities: f.activities.map(a => ({
-            name: a.name, hazard: a.hazard, likelihood: a.l, severity: a.s,
-            risk_index: a.ri, risk_level: a.level, recommendation: a.rec
-          }))
+          activities: f.activities.map(a => { const m=migrateActivity({...a}); return { name:m.name, hazards:m.hazards, avg_ri:m.ri, risk_level:m.level }; })
         }
       });
     });
@@ -2775,9 +2928,7 @@ async function doExportZIP() {
       properties: {
         type: 'facility', name: f.name, description: f.desc || '',
         risk_level: facLevel(f),
-        activities: JSON.stringify(f.activities.map(a => ({
-          name: a.name, hazard: a.hazard, l: a.l, s: a.s, ri: a.ri, level: a.level
-        })))
+        activities: JSON.stringify(f.activities.map(a=>{ const m=migrateActivity({...a}); return {name:m.name,avg_ri:m.ri,level:m.level,hazard_count:(m.hazards||[]).length}; }))
       }
     }));
     zip.file('fasilitas_aktivitas.geojson', JSON.stringify({
@@ -3236,17 +3387,40 @@ async function callGemini(prompt) {
 }
  
 async function genRec() {
-  const fac=(document.getElementById('fa-facility').value&&facilities.find(f=>f.id===document.getElementById('fa-facility').value)?.name)||'area kerja';
-  const act=document.getElementById('fa-name').value||'aktivitas kerja';
-  const hazard=document.getElementById('fa-hazard').value;
-  const effect=document.getElementById('fa-effect').value;
-  const l=document.getElementById('fa-l').value, s=document.getElementById('fa-s').value;
-  if (!hazard) { showToast('⚠️ Isi identifikasi bahaya terlebih dahulu'); return; }
+  const facName=(document.getElementById('fa-facility').value&&facilities.find(f=>f.id===document.getElementById('fa-facility').value)?.name)||'area kerja';
+  const actName=document.getElementById('fa-name').value||'aktivitas kerja';
+  const container=document.getElementById('hazards-container');
+  const entries=container?container.querySelectorAll('.hazard-entry'):[];
+  const hazardList=[];
+  entries.forEach((_,i)=>{
+    const hz=(document.getElementById('he-hazard-'+i)?.value||'').trim();
+    if(!hz) return;
+    const ef=(document.getElementById('he-effect-'+i)?.value||'').trim();
+    const l=document.getElementById('he-l-'+i)?.value||'1';
+    const s=document.getElementById('he-s-'+i)?.value||'1';
+    hazardList.push(`Bahaya ${i+1}: ${hz} | Efek: ${ef||'—'} | L=${l}, S=${s}, RI=${parseInt(l)*parseInt(s)}`);
+  });
+  if(!hazardList.length){showToast('⚠️ Isi identifikasi bahaya terlebih dahulu');return;}
   const btn=document.getElementById('gem-rec-btn'); const out=document.getElementById('gem-rec-out');
   btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Memproses...';
-  const prompt=`Kamu adalah ahli K3 agribisnis. Berikan rekomendasi pengendalian risiko menggunakan Hierarchy of Control untuk:\n\nFasilitas: ${fac}\nAktivitas: ${act}\nBahaya: ${hazard}\nEfek: ${effect||'tidak disebutkan'}\nL=${l}, S=${s}, RI=${l*s}\n\nFormat wajib:\nEliminasi: ...\nSubstitusi: ...\nRekayasa Teknik: ...\nAdministratif: ...\nAPD: ...\n\nGunakan Bahasa Indonesia, singkat dan spesifik.`;
+  const prompt=`Kamu adalah ahli K3 agribisnis. Berikan rekomendasi pengendalian untuk SETIAP bahaya berikut menggunakan Hierarchy of Control:\n\nFasilitas: ${facName}\nAktivitas: ${actName}\n\n${hazardList.join('\n')}\n\nUntuk setiap bahaya, format:\n[Bahaya N]\nEliminasi: ...\nSubstitusi: ...\nRekayasa Teknik: ...\nAdministratif: ...\nAPD: ...\n\nGunakan Bahasa Indonesia, singkat dan spesifik.`;
   const res=await callGemini(prompt);
-  if (res) { out.textContent=res; out.classList.add('visible'); document.getElementById('fa-rec').value=res; }
+  if(res){
+    out.textContent=res; out.classList.add('visible');
+    // Sisipkan hasil ke textarea rec masing-masing entri
+    const lines=res.split('\n');
+    let curIdx=-1;
+    const recParts={};
+    lines.forEach(ln=>{
+      const m=ln.match(/\[Bahaya\s*(\d+)\]/i);
+      if(m){curIdx=parseInt(m[1])-1; recParts[curIdx]='';}
+      else if(curIdx>=0) recParts[curIdx]=(recParts[curIdx]||'')+ln+'\n';
+    });
+    Object.entries(recParts).forEach(([i,txt])=>{
+      const el=document.getElementById('he-rec-'+i);
+      if(el) el.value=txt.trim();
+    });
+  }
   btn.disabled=false; btn.innerHTML='<span>✦</span> Generate Ulang';
 }
  
