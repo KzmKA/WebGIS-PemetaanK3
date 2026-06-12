@@ -1216,7 +1216,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
       <!-- Action buttons -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button class="mf-btn save" style="flex:2" onclick="connectSync()">🔗 Hubungkan &amp; Sinkronkan</button>
-        <button class="mf-btn danger" style="flex:1" onclick="disconnectSync()">🔌 Putuskan</button>
+        <button class="mf-btn danger" style="flex:1" onclick="disconnectSync()" title="Putuskan sinkronisasi dan hapus konfigurasi tersimpan — tidak akan reconnect saat reload">🔌 Putuskan &amp; Hapus Konfigurasi</button>
       </div>
 
       <!-- Cloud TIF Files -->
@@ -1246,6 +1246,12 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
 
     </div>
     <div class="modal-footer">
+      <div style="font-size:10px;color:var(--text3);margin-top:8px;padding:8px;background:var(--bg3);border-radius:6px;border:1px solid var(--border);line-height:1.7">
+        <strong style="color:var(--text2)">ℹ️ Cara kerja sinkronisasi:</strong><br>
+        • <strong>Hubungkan</strong> → semua perubahan (tambah, edit, hapus fasilitas, aktivitas, GeoJSON) langsung disinkronkan ke server.<br>
+        • <strong>Putuskan &amp; Hapus Konfigurasi</strong> → memutus koneksi <em>secara permanen</em>. Halaman yang di-reload <u>tidak akan reconnect</u> otomatis.<br>
+        • Untuk menyambung kembali, isi ulang form di atas dan klik <strong>Hubungkan</strong>.
+      </div>
       <button class="mf-btn cancel" onclick="closeModal('modal-sync')">Tutup</button>
     </div>
   </div>
@@ -2284,7 +2290,7 @@ function deleteDangerZone() {
 }
 function deleteDZ(id) {
   const dz=dangerZones.find(x=>x.id===id);
-  if (!dz||!confirm(`Hapus area bahaya "${dz.name}"?`)) return;
+  if (!dz||!confirm(`Hapus area bahaya "${dz.name}"?${fbSyncEnabled ? '\n\nSinkronisasi aktif — data juga akan dihapus dari server.' : ''}`)) return;
   dangerZones=dangerZones.filter(x=>x.id!==id);
   delete linkMap['dz_'+id];
   save(); renderAll(); closeModal('modal-dzone');
@@ -3134,14 +3140,18 @@ function connectSync() {
   }
 
   const config = { apiKey, databaseURL: url, projectId: projId };
+  // Simpan kredensial & hapus flag putus agar auto-reconnect berjalan
   localStorage.setItem('k3_firebase', JSON.stringify(config));
   localStorage.setItem('k3_room', roomCode);
+  localStorage.removeItem('k3_sync_off');   // ← izinkan auto-reconnect
 
   initFirebaseSync();
   closeModal('modal-sync');
 }
 
 function initFirebaseSync() {
+  // Jika user pernah memutuskan sinkronisasi secara eksplisit → jangan reconnect
+  if (localStorage.getItem('k3_sync_off') === '1') { updateSyncBadge(false); return; }
   const conf = JSON.parse(localStorage.getItem('k3_firebase') || 'null');
   const room = localStorage.getItem('k3_room') || '';
   if (!conf || !room) { updateSyncBadge(false); return; }
@@ -3192,12 +3202,31 @@ function initFirebaseSync() {
 }
 
 function disconnectSync() {
-  if (fbRoomRef) fbRoomRef.off();
+  // 1. Putuskan listener Firebase
+  if (fbRoomRef) { try { fbRoomRef.off(); } catch(e){} }
   fbSyncEnabled = false; fbDb = null; fbRoomRef = null;
+
+  // 2. Hapus kredensial dari localStorage → reload TIDAK akan reconnect
+  localStorage.removeItem('k3_firebase');
+  localStorage.removeItem('k3_room');
+
+  // 3. Pasang flag eksplisit → initFirebaseSync() tidak akan auto-reconnect
+  localStorage.setItem('k3_sync_off', '1');
+
+  // 4. Update UI
   updateSyncBadge(false);
   const banner = document.getElementById('sync-banner');
-  if (banner) { banner.className = 'sync-status-banner off'; banner.textContent = '🔌 Terputus · Perubahan hanya tersimpan lokal'; }
-  showToast('🔌 Sinkronisasi dinonaktifkan');
+  if (banner) {
+    banner.className = 'sync-status-banner off';
+    banner.textContent = '🔌 Terputus · Semua perubahan hanya tersimpan lokal';
+  }
+
+  // 5. Kosongkan kolom input di modal agar tidak ada sisa konfigurasi lama
+  ['sync-fb-url','sync-fb-apikey','sync-fb-projectid','sync-room-code'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+
+  showToast('🔌 Sinkronisasi dinonaktifkan — tidak akan reconnect saat reload');
 }
 
 function pushToCloud() {
@@ -3217,13 +3246,17 @@ function pushToCloud() {
     markerSizes:     JSON.stringify(markerSizes),
     basemap:         document.getElementById('basemap-select')?.value || 'osm',
     geojsonFiles:    JSON.stringify(gjFiles),
-    _ts:             Date.now()
+    _ts:             Date.now(),
+    _v:              '2'           // versi format — untuk kompatibilitas ke depan
   };
 
-  fbRoomRef.set(data).catch(e => {
-    fbIgnoreNext = false;
-    console.error('Firebase push error:', e);
-  });
+  fbRoomRef.set(data)
+    .then(() => { /* push success — silent */ })
+    .catch(e => {
+      fbIgnoreNext = false;
+      console.error('Firebase push error:', e);
+      showToast('❌ Gagal sinkronisasi: ' + e.message);
+    });
 }
 
 function applyCloudData(data) {
@@ -3235,10 +3268,8 @@ function applyCloudData(data) {
     if (data.geojsonStyleMap) Object.assign(geojsonStyleMap, JSON.parse(data.geojsonStyleMap));
     if (data.markerSizes) Object.assign(markerSizes, JSON.parse(data.markerSizes));
 
-    // Save to localStorage
-    localStorage.setItem('k3_fac',   JSON.stringify(facilities));
-    localStorage.setItem('k3_dz',    JSON.stringify(dangerZones));
-    localStorage.setItem('k3_links', JSON.stringify(linkMap));
+    // Simpan ke IndexedDB + localStorage
+    saveToStorage();
 
     // Restore basemap
     if (data.basemap) {
@@ -3248,9 +3279,25 @@ function applyCloudData(data) {
       }
     }
 
-    // Restore GeoJSON files (only add new ones not already loaded)
+    // Restore GeoJSON files: tambah yang baru + hapus yang sudah dihapus di remote
     if (data.geojsonFiles) {
-      const remoteFiles = JSON.parse(data.geojsonFiles);
+      const remoteFiles  = JSON.parse(data.geojsonFiles);
+      const remoteIds    = new Set(remoteFiles.map(rf => rf.fileId));
+
+      // ── Hapus file lokal yang sudah tidak ada di server ──────────
+      const localGJ = loadedFiles.filter(lf => lf.type === 'geojson');
+      localGJ.forEach(lf => {
+        const fid = lf.fileId || lf.id;
+        if (!remoteIds.has(fid)) {
+          if (lf.layer) geojsonLyr.removeLayer(lf.layer);
+          allGeojsonFeatures = allGeojsonFeatures.filter(x => x.fileId !== fid);
+          delete geojsonRawData[fid];
+          loadedFiles = loadedFiles.filter(x => x.id !== lf.id);
+        }
+      });
+      geojsonFeatures = allGeojsonFeatures.map(x => x.feat);
+
+      // ── Tambah file baru yang belum ada di lokal ─────────────────
       remoteFiles.forEach(rf => {
         if (!loadedFiles.find(lf => lf.fileId === rf.fileId)) {
           if (rf.style) geojsonStyleMap[rf.fileId] = rf.style;
@@ -3258,6 +3305,7 @@ function applyCloudData(data) {
           processGeoJSONFile(new File([blob], rf.name), rf.fileId);
         }
       });
+      renderFileLists();
     }
 
     if (changed) renderAll();
@@ -3593,29 +3641,40 @@ function toggleFileVis(fileId) {
  
 function removeFile(fileId) {
   const f = loadedFiles.find(x => x.id === fileId);
-  if (!f || !confirm(`Hapus layer "${f.name}" dari peta?`)) return;
- 
-  // Remove layer from map without affecting others
+  if (!f || !confirm(`Hapus layer "${f.name}" dari peta?${fbSyncEnabled ? '\n\nSinkronisasi aktif — layer ini juga akan dihapus dari server.' : ''}`)) return;
+
+  const realFileId = f.fileId || fileId;
+
   if (f.layer) {
     if (f.type === 'geojson') {
       geojsonLyr.removeLayer(f.layer);
-      // Also clean up allGeojsonFeatures for this file
-      allGeojsonFeatures = allGeojsonFeatures.filter(x => x.fileId !== (f.fileId || fileId));
-      geojsonFeatures = allGeojsonFeatures.map(x => x.feat);
-      // Check if any GeoJSON files remain
+      allGeojsonFeatures = allGeojsonFeatures.filter(x => x.fileId !== realFileId);
+      geojsonFeatures    = allGeojsonFeatures.map(x => x.feat);
+      // Hapus raw data → pushToCloud tidak akan menyertakan file ini lagi
+      delete geojsonRawData[realFileId];
       if (!loadedFiles.some(x => x.id !== fileId && x.type === 'geojson')) {
         const linkBtn = document.getElementById('geojson-link-btn-row');
         if (linkBtn) linkBtn.style.display = 'none';
       }
     } else {
-      // TIF: remove from map
+      // TIF
       map.removeLayer(f.layer);
+      // Hapus dari buffer ekspor/sync
+      tifRawBuffers = tifRawBuffers.filter(t => t.fileId !== realFileId);
     }
   }
- 
+
   loadedFiles = loadedFiles.filter(x => x.id !== fileId);
+
+  // Sinkronkan penghapusan ke Firebase jika aktif
+  if (fbSyncEnabled) {
+    clearTimeout(_pushDebounceTimer);
+    _pushDebounceTimer = setTimeout(pushToCloud, 400);
+    showToast(`🗑 Layer "${f.name}" dihapus + sinkronisasi ke server...`);
+  } else {
+    showToast(`🗑 Layer "${f.name}" dihapus (hanya lokal)`);
+  }
   renderFileLists();
-  showToast(`🗑 Layer "${f.name}" dihapus`);
 }
  
 function moveLayer(fileId, dir) {
