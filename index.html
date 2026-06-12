@@ -1390,6 +1390,66 @@ function idbSet(key, val) {
   });
 }
 
+// ── IDB helpers khusus untuk store gjFiles (GeoJSON persisten) ───────────────
+// Menyimpan SATU file GeoJSON {fileId, name, text} ke IDB
+function idbGJSet(entry) {
+  if (!_idb) return Promise.resolve();
+  return new Promise((res, rej) => {
+    const tx = _idb.transaction('gjFiles','readwrite');
+    tx.objectStore('gjFiles').put(entry);          // keyPath = 'fileId'
+    tx.oncomplete = res;
+    tx.onerror    = () => rej(tx.error);
+  });
+}
+// Mengambil semua file GeoJSON dari IDB
+function idbGJGetAll() {
+  if (!_idb) return Promise.resolve([]);
+  return new Promise(res => {
+    const req = _idb.transaction('gjFiles','readonly').objectStore('gjFiles').getAll();
+    req.onsuccess = () => res(req.result || []);
+    req.onerror   = () => res([]);
+  });
+}
+// Menghapus SATU file GeoJSON dari IDB berdasarkan fileId
+function idbGJDelete(fileId) {
+  if (!_idb) return Promise.resolve();
+  return new Promise(res => {
+    const tx = _idb.transaction('gjFiles','readwrite');
+    tx.objectStore('gjFiles').delete(fileId);
+    tx.oncomplete = res;
+    tx.onerror    = res;
+  });
+}
+// Menghapus SEMUA file GeoJSON dari IDB (dipakai saat restore snapshot)
+function idbGJClear() {
+  if (!_idb) return Promise.resolve();
+  return new Promise(res => {
+    const tx = _idb.transaction('gjFiles','readwrite');
+    tx.objectStore('gjFiles').clear();
+    tx.oncomplete = res;
+    tx.onerror    = res;
+  });
+}
+
+// Tracker timestamp push terakhir → mencegah listener memproses push sendiri
+let _lastPushTs = 0;
+
+// Muat GeoJSON dari IDB dan tampilkan ke peta (dipanggil setelah initMap)
+async function restoreLocalGeoJSON() {
+  try {
+    const saved = await idbGJGetAll();
+    if (!saved || !saved.length) return;
+    for (const gj of saved) {
+      if (!gj.fileId || !gj.text) continue;
+      // Jangan muat ulang jika sudah ada di loadedFiles
+      if (loadedFiles.find(f => f.fileId === gj.fileId)) continue;
+      geojsonRawData[gj.fileId] = { name: gj.name, text: gj.text };
+      const blob = new Blob([gj.text], { type: 'application/json' });
+      processGeoJSONFile(new File([blob], gj.name || 'layer.geojson'), gj.fileId, true);
+    }
+  } catch(e) { console.warn('restoreLocalGeoJSON error:', e); }
+}
+
 // Load semua state dari IndexedDB (atau localStorage sebagai fallback)
 async function loadFromStorage() {
   try {
@@ -1502,6 +1562,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 3. Inisialisasi peta & render
   initMap();
   renderAll();
+
+  // 3b. Pulihkan GeoJSON dari IndexedDB (setelah peta siap)
+  //     Jika Firebase aktif, applyCloudData() akan menimpa / mengoreksi bila perlu
+  restoreLocalGeoJSON().catch(e => console.warn('GeoJSON restore:', e));
 
   // 4. Gemini API key
   const gk = localStorage.getItem('gem_key') || '';
@@ -1656,6 +1720,10 @@ function renderAll() { renderMarkers(); renderDangerZones(); renderSidebar(); up
 function save() {
   // Simpan ke IndexedDB (async, tidak blocking)
   saveToStorage();
+  // Sinkronkan entri GeoJSON aktif ke IDB (misal setelah perubahan style)
+  Object.entries(geojsonRawData).forEach(([fileId, d]) => {
+    idbGJSet({ fileId, name: d.name, text: d.text }).catch(()=>{});
+  });
   // Kirim ke Firebase dengan debounce 600ms agar tidak flood server
   if (fbSyncEnabled) {
     clearTimeout(_pushDebounceTimer);
@@ -2409,7 +2477,7 @@ function doDrop(e,type) {
   }
 }
  
-function processGeoJSONFile(file, savedFileId=null) {
+function processGeoJSONFile(file, savedFileId=null, fromSync=false) {
   const st=document.getElementById('geojson-status'); st.style.display='block';
   st.textContent=`⏳ Memuat ${file.name}...`; st.style.color='var(--text2)';
   const reader=new FileReader();
@@ -2421,6 +2489,8 @@ function processGeoJSONFile(file, savedFileId=null) {
 
       // ── Store raw text for export/sync ────────────────────────
       geojsonRawData[fileId] = { name: file.name, text: e.target.result };
+      // Simpan ke IDB agar GeoJSON tetap ada setelah reload (bahkan tanpa Firebase)
+      idbGJSet({ fileId, name: file.name, text: e.target.result }).catch(()=>{});
  
       // Build a dedicated Leaflet layer for THIS file only (do NOT clear others)
       const fileLyr = L.geoJSON(data, {
@@ -2481,7 +2551,11 @@ function processGeoJSONFile(file, savedFileId=null) {
       renderFileLists();
       showToast(`✅ GeoJSON dimuat: ${rawFeatures.length} fitur dari ${file.name}`);
       // Sync GeoJSON to cloud
-      if (fbSyncEnabled) pushToCloud();
+      // Hanya push ke cloud bila dipanggil oleh user (bukan dari applyCloudData/restore)
+      if (fbSyncEnabled && !fromSync) {
+        clearTimeout(_pushDebounceTimer);
+        _pushDebounceTimer = setTimeout(pushToCloud, 600);
+      }
     } catch(err) {
       st.textContent=`❌ Gagal memuat ${file.name}: ${err.message}`; st.style.color='var(--extreme)';
       console.error('GeoJSON error:', err);
@@ -3063,14 +3137,18 @@ async function restoreFromSnapshot(snapshot) {
   geojsonLyr.clearLayers();
   loadedFiles = loadedFiles.filter(f => f.type !== 'geojson');
 
-  // Restore GeoJSON files
+  // Restore GeoJSON files — bersihkan IDB lama lalu isi ulang
+  await idbGJClear().catch(()=>{});
   if (snapshot.geojsonFiles && snapshot.geojsonFiles.length) {
     for (const f of snapshot.geojsonFiles) {
       try {
         if (f.style && f.fileId) geojsonStyleMap[f.fileId] = f.style;
         const blob = new Blob([f.text], { type: 'application/json' });
         const syntheticFile = new File([blob], f.name || 'layer.geojson');
-        processGeoJSONFile(syntheticFile, f.fileId);
+        // fromSync=true → tidak memicu pushToCloud()
+        processGeoJSONFile(syntheticFile, f.fileId, true);
+        // Simpan ke IDB sehingga tersedia setelah reload tanpa snapshot
+        idbGJSet({ fileId: f.fileId, name: f.name || 'layer.geojson', text: f.text }).catch(()=>{});
       } catch(e) { console.error('GeoJSON restore error:', e); }
     }
   }
@@ -3166,9 +3244,12 @@ function initFirebaseSync() {
 
     // Listen for remote changes
     fbRoomRef.on('value', snapshot => {
+      // Guard 1: skip jika ini adalah echo dari push kita sendiri (fbIgnoreNext)
       if (fbIgnoreNext) { fbIgnoreNext = false; return; }
       const data = snapshot.val();
       if (!data || !data._ts) return;
+      // Guard 2: skip jika timestamp persis sama dengan push terakhir kita (dedup)
+      if (data._ts === _lastPushTs) return;
       applyCloudData(data);
     }, err => {
       showToast('❌ Firebase error: ' + err.message);
@@ -3231,12 +3312,15 @@ function disconnectSync() {
 
 function pushToCloud() {
   if (!fbSyncEnabled || !fbRoomRef) return;
-  fbIgnoreNext = true;
 
   const gjFiles = Object.entries(geojsonRawData).map(([fid, d]) => ({
     fileId: fid, name: d.name, text: d.text,
     style: geojsonStyleMap[fid] || null
   }));
+
+  const ts = Date.now();
+  _lastPushTs = ts;          // track agar listener bisa mengabaikan echo
+  fbIgnoreNext = true;
 
   const data = {
     facilities:      JSON.stringify(facilities),
@@ -3246,14 +3330,15 @@ function pushToCloud() {
     markerSizes:     JSON.stringify(markerSizes),
     basemap:         document.getElementById('basemap-select')?.value || 'osm',
     geojsonFiles:    JSON.stringify(gjFiles),
-    _ts:             Date.now(),
-    _v:              '2'           // versi format — untuk kompatibilitas ke depan
+    _ts:             ts,
+    _v:              '2'
   };
 
   fbRoomRef.set(data)
     .then(() => { /* push success — silent */ })
     .catch(e => {
       fbIgnoreNext = false;
+      _lastPushTs  = 0;
       console.error('Firebase push error:', e);
       showToast('❌ Gagal sinkronisasi: ' + e.message);
     });
@@ -3292,6 +3377,7 @@ function applyCloudData(data) {
           if (lf.layer) geojsonLyr.removeLayer(lf.layer);
           allGeojsonFeatures = allGeojsonFeatures.filter(x => x.fileId !== fid);
           delete geojsonRawData[fid];
+          idbGJDelete(fid).catch(()=>{});            // hapus dari IDB persisten
           loadedFiles = loadedFiles.filter(x => x.id !== lf.id);
         }
       });
@@ -3302,7 +3388,10 @@ function applyCloudData(data) {
         if (!loadedFiles.find(lf => lf.fileId === rf.fileId)) {
           if (rf.style) geojsonStyleMap[rf.fileId] = rf.style;
           const blob = new Blob([rf.text], { type: 'application/json' });
-          processGeoJSONFile(new File([blob], rf.name), rf.fileId);
+          // fromSync=true → cegah loop push ke Firebase
+          processGeoJSONFile(new File([blob], rf.name), rf.fileId, true);
+          // Simpan ke IDB untuk persistensi offline
+          idbGJSet({ fileId: rf.fileId, name: rf.name, text: rf.text }).catch(()=>{});
         }
       });
       renderFileLists();
@@ -3650,8 +3739,9 @@ function removeFile(fileId) {
       geojsonLyr.removeLayer(f.layer);
       allGeojsonFeatures = allGeojsonFeatures.filter(x => x.fileId !== realFileId);
       geojsonFeatures    = allGeojsonFeatures.map(x => x.feat);
-      // Hapus raw data → pushToCloud tidak akan menyertakan file ini lagi
+      // Hapus dari RAM dan dari IDB (persisten)
       delete geojsonRawData[realFileId];
+      idbGJDelete(realFileId).catch(()=>{});
       if (!loadedFiles.some(x => x.id !== fileId && x.type === 'geojson')) {
         const linkBtn = document.getElementById('geojson-link-btn-row');
         if (linkBtn) linkBtn.style.display = 'none';
