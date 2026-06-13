@@ -1443,6 +1443,12 @@ async function restoreLocalGeoJSON() {
       if (!gj.fileId || !gj.text) continue;
       // Jangan muat ulang jika sudah ada di loadedFiles
       if (loadedFiles.find(f => f.fileId === gj.fileId)) continue;
+      // Terapkan style dari IDB sebelum render agar warna langsung benar
+      // (geojsonStyleMap sudah di-load dari k3_geojsonStyleMap, ini sebagai
+      //  fallback berlapis: style juga disimpan di dalam entri gjFiles itu sendiri)
+      if (gj.style && !geojsonStyleMap[gj.fileId]) {
+        geojsonStyleMap[gj.fileId] = gj.style;
+      }
       geojsonRawData[gj.fileId] = { name: gj.name, text: gj.text };
       const blob = new Blob([gj.text], { type: 'application/json' });
       processGeoJSONFile(new File([blob], gj.name || 'layer.geojson'), gj.fileId, true);
@@ -1720,9 +1726,9 @@ function renderAll() { renderMarkers(); renderDangerZones(); renderSidebar(); up
 function save() {
   // Simpan ke IndexedDB (async, tidak blocking)
   saveToStorage();
-  // Sinkronkan entri GeoJSON aktif ke IDB (misal setelah perubahan style)
+  // Sinkronkan entri GeoJSON aktif ke IDB — termasuk style terkini
   Object.entries(geojsonRawData).forEach(([fileId, d]) => {
-    idbGJSet({ fileId, name: d.name, text: d.text }).catch(()=>{});
+    idbGJSet({ fileId, name: d.name, text: d.text, style: geojsonStyleMap[fileId] || null }).catch(()=>{});
   });
   // Kirim ke Firebase dengan debounce 600ms agar tidak flood server
   if (fbSyncEnabled) {
@@ -2490,7 +2496,13 @@ function processGeoJSONFile(file, savedFileId=null, fromSync=false) {
       // ── Store raw text for export/sync ────────────────────────
       geojsonRawData[fileId] = { name: file.name, text: e.target.result };
       // Simpan ke IDB agar GeoJSON tetap ada setelah reload (bahkan tanpa Firebase)
-      idbGJSet({ fileId, name: file.name, text: e.target.result }).catch(()=>{});
+      // Sertakan style jika sudah ada (misal saat restore snapshot / applyCloudData)
+      idbGJSet({
+        fileId,
+        name:  file.name,
+        text:  e.target.result,
+        style: geojsonStyleMap[fileId] || null
+      }).catch(() => {});
  
       // Build a dedicated Leaflet layer for THIS file only (do NOT clear others)
       const fileLyr = L.geoJSON(data, {
@@ -3147,8 +3159,8 @@ async function restoreFromSnapshot(snapshot) {
         const syntheticFile = new File([blob], f.name || 'layer.geojson');
         // fromSync=true → tidak memicu pushToCloud()
         processGeoJSONFile(syntheticFile, f.fileId, true);
-        // Simpan ke IDB sehingga tersedia setelah reload tanpa snapshot
-        idbGJSet({ fileId: f.fileId, name: f.name || 'layer.geojson', text: f.text }).catch(()=>{});
+        // Simpan ke IDB (dengan style) sehingga tersedia setelah reload tanpa snapshot
+        idbGJSet({ fileId: f.fileId, name: f.name || 'layer.geojson', text: f.text, style: geojsonStyleMap[f.fileId] || null }).catch(()=>{});
       } catch(e) { console.error('GeoJSON restore error:', e); }
     }
   }
@@ -3390,8 +3402,8 @@ function applyCloudData(data) {
           const blob = new Blob([rf.text], { type: 'application/json' });
           // fromSync=true → cegah loop push ke Firebase
           processGeoJSONFile(new File([blob], rf.name), rf.fileId, true);
-          // Simpan ke IDB untuk persistensi offline
-          idbGJSet({ fileId: rf.fileId, name: rf.name, text: rf.text }).catch(()=>{});
+          // Simpan ke IDB (termasuk style) untuk persistensi offline
+          idbGJSet({ fileId: rf.fileId, name: rf.name, text: rf.text, style: rf.style || null }).catch(()=>{});
         }
       });
       renderFileLists();
@@ -3870,7 +3882,19 @@ function applyGJStyle(fileId) {
       if (l.setRadius) l.setRadius(sty.pointRadius);
     });
   }
-  showToast('🎨 Gaya layer "' + (lf ? lf.name : fileId) + '" diterapkan');
+  // ── Simpan perubahan gaya secara permanen ─────────────────────────────
+  // 1. Simpan geojsonStyleMap ke IndexedDB (kv store) + push ke Firebase
+  save();
+  // 2. Perbarui entri gjFiles di IDB agar style ikut terbawa saat restore lokal
+  if (geojsonRawData[fid]) {
+    idbGJSet({
+      fileId: fid,
+      name:   geojsonRawData[fid].name,
+      text:   geojsonRawData[fid].text,
+      style:  geojsonStyleMap[fid]
+    }).catch(() => {});
+  }
+  showToast('🎨 Gaya layer "' + (lf ? lf.name : fileId) + '" diterapkan & disimpan');
 }
  
 // ═══════════════════════════════════════════════════════
