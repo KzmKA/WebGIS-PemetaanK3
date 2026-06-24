@@ -13,9 +13,11 @@
 <!-- GeoTIFF / georaster — stable CDN -->
 <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
-<!-- Firebase for real-time sync -->
+<!-- Firebase for real-time sync + auth -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <!-- Firebase Storage — for large GeoTIFF files (up to TB) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 <!-- JSZip for ZIP export -->
@@ -100,7 +102,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
 .risk-marker.medium{background:rgba(252,255,66,.65);border-color:var(--medium);color:#222;}
 .risk-marker.high{background:rgba(255,66,66,.65);border-color:var(--high);color:#fff;}
 .risk-marker.extreme{background:rgba(181,48,48,.65);border-color:var(--extreme);color:#fff;}
-.risk-marker.none{background:rgba(110,118,129,.2);border-color:var(--text3);color:var(--text3);}
+.risk-marker.none{background:rgba(110,118,129,.45);border-color:var(--text3);color:#e6edf3;}
 .risk-marker .pulse{position:absolute;width:100%;height:100%;border-radius:50%;border:2px solid;animation:pulse 2s infinite;top:0;left:0;}
 .risk-marker.extreme .pulse{border-color:var(--extreme);}
 .risk-marker.high .pulse{border-color:var(--high);}
@@ -519,9 +521,182 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
 .hazard-detail-header{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
 .hazard-num-circle{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;font-family:var(--mono);flex-shrink:0;}
 
-</style>
+/* ═══════════════════════════════════════════
+   AUTH OVERLAY — Login, Register, Setup Screen
+   ═══════════════════════════════════════════ */
+#auth-overlay{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:#0d1117;}
+.auth-card{width:100%;max-width:400px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px 32px;box-shadow:0 24px 64px rgba(0,0,0,.75);position:relative;}
+.auth-logo{text-align:center;margin-bottom:22px;}
+.auth-logo-icon{font-size:38px;margin-bottom:8px;}
+.auth-logo-title{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
+.auth-logo-sub{font-size:10px;color:var(--text3);margin-top:3px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;}
+.auth-screen-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px;text-align:center;}
+.auth-field{margin-bottom:13px;}
+.auth-label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;letter-spacing:.3px;}
+.auth-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);transition:border-color var(--tr);outline:none;}
+.auth-input:focus{border-color:var(--brand2);}
+.auth-input.err{border-color:var(--high) !important;}
+.auth-btn{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);background:var(--brand);color:#fff;margin-top:4px;transition:background var(--tr),transform .1s;letter-spacing:.2px;}
+.auth-btn:hover{background:var(--brand2);}
+.auth-btn:active{transform:scale(.98);}
+.auth-btn.ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);margin-top:8px;}
+.auth-btn.ghost:hover{background:var(--bg3);color:var(--text);}
+.auth-divider{text-align:center;color:var(--text3);font-size:11px;margin:12px 0;position:relative;}
+.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:var(--border);}
+.auth-divider::before{left:0;}.auth-divider::after{right:0;}
+.auth-msg{border-radius:7px;padding:8px 11px;font-size:12px;margin-bottom:12px;display:none;line-height:1.5;}
+.auth-msg.error{background:rgba(255,66,66,.1);border:1px solid var(--high);color:var(--high);}
+.auth-msg.success{background:rgba(0,189,3,.1);border:1px solid var(--low);color:var(--low);}
+.auth-msg.info{background:rgba(31,111,235,.1);border:1px solid var(--brand);color:var(--brand2);}
+.auth-hint-text{font-size:10px;color:var(--text3);margin-top:3px;line-height:1.5;}
+.auth-footer{text-align:center;margin-top:14px;font-size:11px;color:var(--text3);}
+.auth-link-btn{background:none;border:none;color:var(--brand2);cursor:pointer;font-size:11px;font-family:var(--font);text-decoration:underline;padding:0;}
+.auth-link-btn:hover{color:var(--text);}
+.auth-loading{display:none;text-align:center;padding:6px 0;font-size:11px;color:var(--text3);}
+.auth-spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--brand);border-radius:50%;animation:aSpin .7s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes aSpin{to{transform:rotate(360deg);}}
+/* Disconnect confirm popup */
+#modal-disconnect-confirm .modal{max-width:380px;}
+.dc-option-btn{width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font);cursor:pointer;text-align:left;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;transition:background var(--tr),border-color var(--tr);}
+.dc-option-btn:hover{background:var(--bg4);border-color:var(--border2);}
+.dc-option-btn.danger{border-color:rgba(255,66,66,.35);}
+.dc-option-btn.danger:hover{background:rgba(255,66,66,.08);border-color:var(--high);}
+.dc-option-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.dc-option-title{font-weight:700;font-size:12px;margin-bottom:2px;}
+.dc-option-desc{font-size:10px;color:var(--text3);line-height:1.5;}
+
 </head>
 <body>
+<!-- ══════════════════════════════════════
+     AUTH OVERLAY — SIPETA K3
+     ══════════════════════════════════════ -->
+<div id="auth-overlay" style="display:none">
+
+  <!-- SCREEN 1: SETUP (first-time Firebase config) -->
+  <div id="auth-screen-setup" class="auth-card" style="display:none">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🗺️</div>
+      <div class="auth-logo-title">SIPETA K3</div>
+      <div class="auth-logo-sub">Sistem Informasi Pemetaan Bahaya K3</div>
+    </div>
+    <div class="auth-screen-title">Konfigurasi Firebase</div>
+    <div class="auth-msg info" id="setup-msg" style="display:block">
+      Masukkan konfigurasi Firebase project Anda. Data ini hanya disimpan di browser Anda dan tidak dikirim ke pihak lain.
+    </div>
+    <div class="auth-msg error" id="setup-error"></div>
+    <div class="auth-field">
+      <label class="auth-label">Firebase API Key *</label>
+      <input class="auth-input" id="setup-apikey" type="text" placeholder="AIzaSy...">
+      <div class="auth-hint-text">Firebase Console → Project Settings → General → Web API Key</div>
+    </div>
+    <div class="auth-field">
+      <label class="auth-label">Firebase Project ID *</label>
+      <input class="auth-input" id="setup-projectid" type="text" placeholder="nama-project-firebase">
+      <div class="auth-hint-text">Contoh: webgis-k3-atp-ipb (lihat di Firebase Console → Project Settings)</div>
+    </div>
+    <div class="auth-loading" id="setup-loading"><span class="auth-spin"></span>Menghubungkan ke Firebase...</div>
+    <button class="auth-btn" onclick="saveAuthSetup()">Simpan &amp; Lanjutkan →</button>
+  </div>
+
+  <!-- SCREEN 2: LOGIN -->
+  <div id="auth-screen-login" class="auth-card" style="display:none">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🗺️</div>
+      <div class="auth-logo-title">SIPETA K3</div>
+      <div class="auth-logo-sub">Sistem Informasi Pemetaan Bahaya K3</div>
+    </div>
+    <div class="auth-screen-title">Masuk ke Akun</div>
+    <div class="auth-msg error" id="login-error"></div>
+    <div class="auth-msg success" id="login-success"></div>
+    <div class="auth-field">
+      <label class="auth-label">Username atau Alamat Email</label>
+      <input class="auth-input" id="login-user" type="text" placeholder="username atau email@domain.com"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div class="auth-field">
+      <label class="auth-label">Kata Sandi</label>
+      <input class="auth-input" id="login-pass" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="auth-loading" id="login-loading"><span class="auth-spin"></span>Memverifikasi akun...</div>
+    <button class="auth-btn" onclick="doLogin()">Masuk</button>
+    <div class="auth-divider">atau</div>
+    <button class="auth-btn ghost" onclick="showAuthScreen('register')">Buat Akun Baru</button>
+    <div class="auth-footer">
+      <button class="auth-link-btn" onclick="showAuthScreen('setup')" style="font-size:10px">⚙️ Ubah konfigurasi Firebase</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: REGISTER -->
+  <div id="auth-screen-register" class="auth-card" style="display:none">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🗺️</div>
+      <div class="auth-logo-title">SIPETA K3</div>
+      <div class="auth-logo-sub">Daftar Akun Baru</div>
+    </div>
+    <div class="auth-screen-title">Buat Akun</div>
+    <div class="auth-msg error" id="reg-error"></div>
+    <div class="auth-msg success" id="reg-success"></div>
+    <div class="auth-field">
+      <label class="auth-label">Nama Pengguna (Username) *</label>
+      <input class="auth-input" id="reg-username" type="text" placeholder="nama_pengguna (tanpa spasi)"
+        oninput="this.value=this.value.replace(/\s/g,'_').toLowerCase()">
+      <div class="auth-hint-text">Hanya huruf, angka, dan garis bawah. Contoh: budi_ipb</div>
+    </div>
+    <div class="auth-field">
+      <label class="auth-label">Alamat Email *</label>
+      <input class="auth-input" id="reg-email" type="email" placeholder="email@domain.com">
+    </div>
+    <div class="auth-field">
+      <label class="auth-label">Kata Sandi *</label>
+      <input class="auth-input" id="reg-password" type="password" placeholder="Minimal 6 karakter">
+    </div>
+    <div class="auth-field">
+      <label class="auth-label">Konfirmasi Kata Sandi *</label>
+      <input class="auth-input" id="reg-confirm" type="password" placeholder="Ulangi kata sandi"
+        onkeydown="if(event.key==='Enter')doRegister()">
+    </div>
+    <div class="auth-loading" id="reg-loading"><span class="auth-spin"></span>Mendaftarkan akun...</div>
+    <button class="auth-btn" onclick="doRegister()">Daftar</button>
+    <div class="auth-divider">sudah punya akun?</div>
+    <button class="auth-btn ghost" onclick="showAuthScreen('login')">Masuk</button>
+  </div>
+
+</div><!-- /auth-overlay -->
+
+<!-- DISCONNECT CONFIRM POPUP -->
+<div class="modal-overlay" id="modal-disconnect-confirm">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div style="font-size:16px">🔌</div>
+      <div class="modal-title">Putuskan Sinkronisasi</div>
+      <button class="modal-close" onclick="closeModal('modal-disconnect-confirm')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">
+        Sinkronisasi akan diputus sepenuhnya. Semua perubahan yang telah Anda buat selama sinkronisasi aktif <strong style="color:var(--text)">sudah tersimpan di Firebase</strong>. Pilih apa yang ingin dilakukan dengan data yang ditampilkan dari database:
+      </p>
+      <button class="dc-option-btn" onclick="executeDisconnect(true)">
+        <div class="dc-option-icon">📌</div>
+        <div>
+          <div class="dc-option-title">Pertahankan Data di Peta</div>
+          <div class="dc-option-desc">Data dari database tetap terlihat di peta setelah sinkronisasi diputus. Perubahan selanjutnya hanya bersifat lokal.</div>
+        </div>
+      </button>
+      <button class="dc-option-btn danger" onclick="executeDisconnect(false)">
+        <div class="dc-option-icon">🗑</div>
+        <div>
+          <div class="dc-option-title">Hapus Data Sinkronisasi dari Peta</div>
+          <div class="dc-option-desc">Mengembalikan peta ke kondisi sebelum sinkronisasi dimulai. Data di Firebase <strong>tidak akan terhapus</strong>.</div>
+        </div>
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="mf-btn cancel" onclick="closeModal('modal-disconnect-confirm')">Batal</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
  
 <!-- ── TOPBAR ── -->
@@ -545,6 +720,9 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
   <button id="sync-status-btn" class="tbtn" onclick="openModal('modal-sync')" title="Sinkronisasi Real-Time">🔌 Offline</button>
   <button class="tbtn gem" onclick="openModal('modal-gemini')">✦ Gemini</button>
   <div class="topbar-divider"></div>
+  <button id="btn-user-logout" class="tbtn" onclick="showLogoutConfirm()" title="Klik untuk keluar" style="display:none;gap:4px;align-items:center">
+    <span>👤</span><span id="topbar-username" style="font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  </button>
   <button class="tbtn" onclick="toggleSidebar()">☰</button>
 </div>
  
@@ -704,7 +882,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
       </div>
       <div class="sidebar-list" id="sidebar-list"></div>
       <div class="sidebar-footer">
-        <button class="sf-btn" onclick="openModal('modal-add-fac')">🏭 + Fasilitas</button>
+        <button class="sf-btn" onclick="openAddFacModal()">🏭 + Fasilitas</button>
         <button class="sf-btn warn" onclick="openAddDangerZone()">⚠️ Area Bahaya</button>
       </div>
     </div>
@@ -777,7 +955,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
         Pilih jenis data yang ingin Anda tambahkan ke dalam sistem pemetaan K3 ini.
       </p>
       <!-- Fasilitas Card -->
-      <div class="tambah-card" onclick="closeModal('modal-tambah');openModal('modal-add-fac')">
+      <div class="tambah-card" onclick="closeModal('modal-tambah');openAddFacModal()">
         <div class="tc-icon" style="background:rgba(46,160,67,.15);border:1.5px solid var(--accent)">🏭</div>
         <div class="tc-body">
           <div class="tc-title">Fasilitas Baru</div>
@@ -1216,7 +1394,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
       <!-- Action buttons -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button class="mf-btn save" style="flex:2" onclick="connectSync()">🔗 Hubungkan &amp; Sinkronkan</button>
-        <button class="mf-btn danger" style="flex:1" onclick="disconnectSync()" title="Putuskan sinkronisasi dan hapus konfigurasi tersimpan — tidak akan reconnect saat reload">🔌 Putuskan &amp; Hapus Konfigurasi</button>
+        <button class="mf-btn danger" style="flex:1" onclick="openModal('modal-disconnect-confirm')" title="Putuskan sinkronisasi — pilih apakah data tetap dipertahankan atau dihapus dari peta">🔌 Putuskan &amp; Hapus Konfigurasi</button>
       </div>
 
       <!-- Cloud TIF Files -->
@@ -1335,6 +1513,8 @@ let tifRawBuffers  = [];
 
 // ── FIREBASE REAL-TIME SYNC ───────────────────────────────────
 let fbSyncEnabled = false, fbDb = null, fbRoomRef = null, fbIgnoreNext = false;
+// Pre-sync snapshot — stores state BEFORE sync started, used to restore on disconnect
+let _preSyncFacilities = null, _preSyncDangerZones = null, _preSyncLinkMap = null;
 let _pushDebounceTimer = null; // debounce Firebase pushes
 
 // ── EXPORT UI STATE ──────────────────────────────────────────
@@ -3249,9 +3429,17 @@ function initFirebaseSync() {
   if (typeof firebase === 'undefined') { showToast('⚠️ Firebase SDK belum termuat'); return; }
 
   try {
-    if (!firebase.apps || !firebase.apps.length) {
-      firebase.initializeApp(conf);
-    }
+    // Save snapshot BEFORE cloud data overwrites local data
+    _preSyncFacilities = JSON.parse(JSON.stringify(facilities));
+    _preSyncDangerZones = JSON.parse(JSON.stringify(dangerZones));
+    _preSyncLinkMap = JSON.parse(JSON.stringify(linkMap));
+
+    // Initialize default Firebase app — check explicitly for [DEFAULT] to avoid
+    // conflict with the named 'sipeta-auth' app used for authentication
+    let defaultAppExists = false;
+    try { firebase.app(); defaultAppExists = true; } catch(e) { defaultAppExists = false; }
+    if (!defaultAppExists) { firebase.initializeApp(conf); }
+
     fbDb = firebase.database();
     fbRoomRef = fbDb.ref('k3rooms/' + room);
 
@@ -3295,19 +3483,40 @@ function initFirebaseSync() {
   }
 }
 
-function disconnectSync() {
+// Called by the popup modal buttons
+function executeDisconnect(keepData) {
+  closeModal('modal-disconnect-confirm');
+  disconnectSync(keepData);
+}
+
+function disconnectSync(keepData = true) {
   // 1. Putuskan listener Firebase
   if (fbRoomRef) { try { fbRoomRef.off(); } catch(e){} }
   fbSyncEnabled = false; fbDb = null; fbRoomRef = null;
 
-  // 2. Hapus kredensial dari localStorage → reload TIDAK akan reconnect
+  // 2. Jika user pilih HAPUS data sinkronisasi → kembalikan ke snapshot sebelum sync
+  if (!keepData && _preSyncFacilities !== null) {
+    facilities  = JSON.parse(JSON.stringify(_preSyncFacilities));
+    dangerZones = JSON.parse(JSON.stringify(_preSyncDangerZones));
+    linkMap     = JSON.parse(JSON.stringify(_preSyncLinkMap));
+    save();
+    renderAll();
+    showToast('🗑 Data sinkronisasi dihapus dari peta — Firebase tidak terpengaruh');
+  } else {
+    showToast('📌 Data sinkronisasi dipertahankan di peta');
+  }
+
+  // 3. Bersihkan snapshot
+  _preSyncFacilities = null; _preSyncDangerZones = null; _preSyncLinkMap = null;
+
+  // 4. Hapus kredensial dari localStorage → reload TIDAK akan reconnect
   localStorage.removeItem('k3_firebase');
   localStorage.removeItem('k3_room');
 
-  // 3. Pasang flag eksplisit → initFirebaseSync() tidak akan auto-reconnect
+  // 5. Pasang flag eksplisit → initFirebaseSync() tidak akan auto-reconnect
   localStorage.setItem('k3_sync_off', '1');
 
-  // 4. Update UI
+  // 6. Update UI
   updateSyncBadge(false);
   const banner = document.getElementById('sync-banner');
   if (banner) {
@@ -3315,12 +3524,10 @@ function disconnectSync() {
     banner.textContent = '🔌 Terputus · Semua perubahan hanya tersimpan lokal';
   }
 
-  // 5. Kosongkan kolom input di modal agar tidak ada sisa konfigurasi lama
+  // 7. Kosongkan kolom input di modal agar tidak ada sisa konfigurasi lama
   ['sync-fb-url','sync-fb-apikey','sync-fb-projectid','sync-room-code'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-
-  showToast('🔌 Sinkronisasi dinonaktifkan — tidak akan reconnect saat reload');
 }
 
 function pushToCloud() {
@@ -3954,6 +4161,282 @@ function updateDangerLabelSize(px) {
   });
 }
  
+// ════════════════════════════════════════════════════════════
+//  SIPETA K3 — AUTH SYSTEM (Firebase Authentication + Firestore)
+// ════════════════════════════════════════════════════════════
+
+const AUTH_APP_NAME = 'sipeta-auth';
+let _authApp   = null;
+let _authFire  = null; // Firestore instance for user data
+let _authInst  = null; // firebase.auth() instance
+
+// ── Helpers ─────────────────────────────────────────────────
+function showAuthScreen(screen) {
+  ['setup','login','register'].forEach(s => {
+    const el = document.getElementById('auth-screen-' + s);
+    if (el) el.style.display = (s === screen) ? 'block' : 'none';
+  });
+  // Clear messages on screen switch
+  ['setup-error','login-error','login-success','reg-error','reg-success'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.display='none'; el.textContent=''; }
+  });
+  ['setup-loading','login-loading','reg-loading'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function _showMsg(id, text, show=true) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.style.display = show ? 'block' : 'none';
+}
+function _setLoading(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+function _translateFbError(code) {
+  const map = {
+    'auth/user-not-found'       : 'Akun tidak ditemukan.',
+    'auth/wrong-password'       : 'Kata sandi salah.',
+    'auth/invalid-email'        : 'Format email tidak valid.',
+    'auth/email-already-in-use' : 'Email sudah digunakan.',
+    'auth/weak-password'        : 'Kata sandi terlalu lemah (min. 6 karakter).',
+    'auth/too-many-requests'    : 'Terlalu banyak percobaan. Coba lagi nanti.',
+    'auth/network-request-failed': 'Gagal terhubung ke server. Periksa koneksi internet.',
+    'auth/invalid-credential'   : 'Email atau kata sandi salah.',
+    'auth/user-disabled'        : 'Akun ini telah dinonaktifkan.'
+  };
+  return map[code] || 'Terjadi kesalahan. Kode: ' + code;
+}
+
+// ── Firebase Auth Initialization ────────────────────────────
+function initAuthApp(apiKey, projectId) {
+  try {
+    const existing = firebase.apps.find(a => a.name === AUTH_APP_NAME);
+    _authApp  = existing || firebase.initializeApp(
+      { apiKey, authDomain: projectId + '.firebaseapp.com', projectId },
+      AUTH_APP_NAME
+    );
+    _authFire = firebase.firestore(_authApp);
+    _authInst = firebase.auth(_authApp);
+    return true;
+  } catch(e) {
+    console.error('Auth init error:', e);
+    return false;
+  }
+}
+
+// ── SETUP SCREEN ─────────────────────────────────────────────
+function saveAuthSetup() {
+  const apiKey    = (document.getElementById('setup-apikey')?.value || '').trim();
+  const projectId = (document.getElementById('setup-projectid')?.value || '').trim();
+  if (!apiKey || !projectId) {
+    _showMsg('setup-error','⚠️ API Key dan Project ID wajib diisi.');
+    return;
+  }
+  _showMsg('setup-error','', false);
+  _setLoading('setup-loading', true);
+  const ok = initAuthApp(apiKey, projectId);
+  if (!ok) {
+    _setLoading('setup-loading', false);
+    _showMsg('setup-error','❌ Konfigurasi Firebase tidak valid. Periksa API Key dan Project ID.');
+    return;
+  }
+  localStorage.setItem('k3_auth_config', JSON.stringify({ apiKey, projectId }));
+  // Listen auth state — if valid config, will proceed to login
+  _authInst.onAuthStateChanged(user => {
+    _setLoading('setup-loading', false);
+    if (user) { _onUserLoggedIn(user); }
+    else { showAuthScreen('login'); }
+  });
+}
+
+// ── LOGIN ────────────────────────────────────────────────────
+async function doLogin() {
+  const raw  = (document.getElementById('login-user')?.value || '').trim();
+  const pass = document.getElementById('login-pass')?.value || '';
+  _showMsg('login-error','', false);
+  _showMsg('login-success','', false);
+  if (!raw || !pass) { _showMsg('login-error','⚠️ Isi semua field terlebih dahulu.'); return; }
+
+  _setLoading('login-loading', true);
+  let email = raw;
+
+  // If input is username (no @) → look up email from Firestore
+  if (!raw.includes('@')) {
+    try {
+      const snap = await _authFire.collection('usernames').doc(raw).get();
+      if (!snap.exists) {
+        _setLoading('login-loading', false);
+        _showMsg('login-error','❌ Username tidak ditemukan.');
+        return;
+      }
+      email = snap.data().email;
+    } catch(e) {
+      _setLoading('login-loading', false);
+      _showMsg('login-error','❌ Gagal memeriksa username: ' + e.message);
+      return;
+    }
+  }
+
+  try {
+    await _authInst.signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged will handle success
+  } catch(e) {
+    _setLoading('login-loading', false);
+    _showMsg('login-error','❌ ' + _translateFbError(e.code));
+  }
+}
+
+// ── REGISTER ─────────────────────────────────────────────────
+async function doRegister() {
+  const username  = (document.getElementById('reg-username')?.value || '').trim();
+  const email     = (document.getElementById('reg-email')?.value || '').trim();
+  const pass      = document.getElementById('reg-password')?.value || '';
+  const passConf  = document.getElementById('reg-confirm')?.value || '';
+  _showMsg('reg-error','', false);
+  _showMsg('reg-success','', false);
+
+  // Validasi
+  if (!username || !email || !pass || !passConf) {
+    _showMsg('reg-error','⚠️ Semua field wajib diisi.'); return;
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+    _showMsg('reg-error','⚠️ Username hanya boleh berisi huruf, angka, dan garis bawah.'); return;
+  }
+  if (!email.includes('@') || !email.includes('.')) {
+    _showMsg('reg-error','⚠️ Format email tidak valid. Pastikan mengandung "@" dan domain.'); return;
+  }
+  if (pass.length < 6) {
+    _showMsg('reg-error','⚠️ Kata sandi minimal 6 karakter.'); return;
+  }
+  if (pass !== passConf) {
+    _showMsg('reg-error','⚠️ Konfirmasi kata sandi tidak cocok.'); return;
+  }
+
+  _setLoading('reg-loading', true);
+
+  // Cek username unik
+  try {
+    const uSnap = await _authFire.collection('usernames').doc(username).get();
+    if (uSnap.exists) {
+      _setLoading('reg-loading', false);
+      _showMsg('reg-error','❌ Nama Pengguna "' + username + '" sudah digunakan. Pilih yang lain.'); return;
+    }
+  } catch(e) {
+    _setLoading('reg-loading', false);
+    _showMsg('reg-error','❌ Gagal memeriksa username: ' + e.message); return;
+  }
+
+  // Buat akun Firebase Auth
+  try {
+    const cred = await _authInst.createUserWithEmailAndPassword(email, pass);
+    const uid  = cred.user.uid;
+
+    // Simpan profil user di Firestore
+    await _authFire.collection('users').doc(uid).set({
+      username, email,
+      createdAt: new Date().toISOString()
+    });
+    // Simpan pemetaan username → email (untuk login via username)
+    await _authFire.collection('usernames').doc(username).set({ uid, email });
+
+    // Kirim email verifikasi (opsional — tidak blokir login jika gagal)
+    try { await cred.user.sendEmailVerification(); } catch(_) {}
+
+    _setLoading('reg-loading', false);
+    _showMsg('reg-success',
+      '✅ Akun berhasil dibuat! Email verifikasi dikirim ke ' + email +
+      '. Silakan masuk.', true);
+    // Pindah ke halaman login setelah 2 detik
+    setTimeout(() => showAuthScreen('login'), 2000);
+
+  } catch(e) {
+    _setLoading('reg-loading', false);
+    if (e.code === 'auth/email-already-in-use') {
+      _showMsg('reg-error','❌ Alamat email "' + email + '" sudah digunakan.');
+    } else {
+      _showMsg('reg-error','❌ ' + _translateFbError(e.code));
+    }
+  }
+}
+
+// ── AUTH STATE HANDLER ───────────────────────────────────────
+function _onUserLoggedIn(user) {
+  // Sembunyikan overlay auth, tampilkan app
+  const overlay = document.getElementById('auth-overlay');
+  if (overlay) overlay.style.display = 'none';
+
+  // Ambil username dari Firestore untuk topbar
+  _authFire.collection('users').doc(user.uid).get().then(snap => {
+    const name = snap.exists ? (snap.data().username || user.email) : user.email;
+    const btn  = document.getElementById('btn-user-logout');
+    const span = document.getElementById('topbar-username');
+    if (btn)  { btn.style.display  = 'inline-flex'; }
+    if (span) { span.textContent   = name; }
+  }).catch(() => {
+    const btn = document.getElementById('btn-user-logout');
+    if (btn) { btn.style.display = 'inline-flex'; }
+    const span = document.getElementById('topbar-username');
+    if (span) span.textContent = user.email;
+  });
+}
+
+// ── LOGOUT ───────────────────────────────────────────────────
+function showLogoutConfirm() {
+  const name = document.getElementById('topbar-username')?.textContent || '';
+  const ok = confirm('Keluar dari akun' + (name ? ' "' + name + '"' : '') + '?');
+  if (!ok) return;
+  if (_authInst) {
+    _authInst.signOut().then(() => {
+      const overlay = document.getElementById('auth-overlay');
+      if (overlay) overlay.style.display = 'flex';
+      showAuthScreen('login');
+      const btn = document.getElementById('btn-user-logout');
+      if (btn) btn.style.display = 'none';
+    });
+  }
+}
+
+// ── BOOTSTRAP ────────────────────────────────────────────────
+(function bootAuth() {
+  const conf = JSON.parse(localStorage.getItem('k3_auth_config') || 'null');
+  const overlay = document.getElementById('auth-overlay');
+
+  if (!conf || !conf.apiKey || !conf.projectId) {
+    // First time — show setup screen
+    if (overlay) overlay.style.display = 'flex';
+    showAuthScreen('setup');
+    return;
+  }
+
+  // Config exists — initialize auth immediately
+  const ok = initAuthApp(conf.apiKey, conf.projectId);
+  if (!ok) {
+    if (overlay) overlay.style.display = 'flex';
+    showAuthScreen('setup');
+    return;
+  }
+
+  // Wait for Firebase to restore auth session
+  if (overlay) overlay.style.display = 'flex';
+  showAuthScreen('login'); // show login while checking session
+
+  _authInst.onAuthStateChanged(user => {
+    if (user) {
+      _onUserLoggedIn(user);
+    } else {
+      if (overlay) overlay.style.display = 'flex';
+      showAuthScreen('login');
+    }
+  });
+})();
+
+
 </script>
 </body>
 </html>
