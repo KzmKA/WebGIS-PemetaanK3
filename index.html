@@ -17,7 +17,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <!-- Firebase Storage — for large GeoTIFF files (up to TB) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 <!-- JSZip for ZIP export -->
@@ -521,181 +520,150 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
 .hazard-detail-header{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
 .hazard-num-circle{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;font-family:var(--mono);flex-shrink:0;}
 
-/* ═══════════════════════════════════════════
-   AUTH OVERLAY — Login, Register, Setup Screen
-   ═══════════════════════════════════════════ */
-#auth-overlay{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:#0d1117;}
-.auth-card{width:100%;max-width:400px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:36px 32px;box-shadow:0 24px 64px rgba(0,0,0,.75);position:relative;}
-.auth-logo{text-align:center;margin-bottom:22px;}
-.auth-logo-icon{font-size:38px;margin-bottom:8px;}
-.auth-logo-title{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.3px;}
-.auth-logo-sub{font-size:10px;color:var(--text3);margin-top:3px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;}
-.auth-screen-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px;text-align:center;}
-.auth-field{margin-bottom:13px;}
-.auth-label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;letter-spacing:.3px;}
-.auth-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;font-family:var(--font);transition:border-color var(--tr);outline:none;}
-.auth-input:focus{border-color:var(--brand2);}
-.auth-input.err{border-color:var(--high) !important;}
-.auth-btn{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--font);background:var(--brand);color:#fff;margin-top:4px;transition:background var(--tr),transform .1s;letter-spacing:.2px;}
-.auth-btn:hover{background:var(--brand2);}
-.auth-btn:active{transform:scale(.98);}
-.auth-btn.ghost{background:transparent;border:1px solid var(--border2);color:var(--text2);margin-top:8px;}
-.auth-btn.ghost:hover{background:var(--bg3);color:var(--text);}
-.auth-divider{text-align:center;color:var(--text3);font-size:11px;margin:12px 0;position:relative;}
-.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:var(--border);}
-.auth-divider::before{left:0;}.auth-divider::after{right:0;}
-.auth-msg{border-radius:7px;padding:8px 11px;font-size:12px;margin-bottom:12px;display:none;line-height:1.5;}
-.auth-msg.error{background:rgba(255,66,66,.1);border:1px solid var(--high);color:var(--high);}
-.auth-msg.success{background:rgba(0,189,3,.1);border:1px solid var(--low);color:var(--low);}
-.auth-msg.info{background:rgba(31,111,235,.1);border:1px solid var(--brand);color:var(--brand2);}
-.auth-hint-text{font-size:10px;color:var(--text3);margin-top:3px;line-height:1.5;}
-.auth-footer{text-align:center;margin-top:14px;font-size:11px;color:var(--text3);}
-.auth-link-btn{background:none;border:none;color:var(--brand2);cursor:pointer;font-size:11px;font-family:var(--font);text-decoration:underline;padding:0;}
-.auth-link-btn:hover{color:var(--text);}
-.auth-loading{display:none;text-align:center;padding:6px 0;font-size:11px;color:var(--text3);}
-.auth-spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border2);border-top-color:var(--brand);border-radius:50%;animation:aSpin .7s linear infinite;vertical-align:middle;margin-right:5px;}
-@keyframes aSpin{to{transform:rotate(360deg);}}
-/* Disconnect confirm popup */
-#modal-disconnect-confirm .modal{max-width:380px;}
-.dc-option-btn{width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font);cursor:pointer;text-align:left;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;transition:background var(--tr),border-color var(--tr);}
-.dc-option-btn:hover{background:var(--bg4);border-color:var(--border2);}
-.dc-option-btn.danger{border-color:rgba(255,66,66,.35);}
-.dc-option-btn.danger:hover{background:rgba(255,66,66,.08);border-color:var(--high);}
-.dc-option-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
-.dc-option-title{font-weight:700;font-size:12px;margin-bottom:2px;}
-.dc-option-desc{font-size:10px;color:var(--text3);line-height:1.5;}
-
+/* ═══════════ PRE-AUTH OVERLAY ═══════════ */
+#pre-auth{position:fixed;inset:0;z-index:9999;background:#0d1117;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;}
+.pa-card{width:100%;max-width:400px;background:#161b22;border:1px solid #30363d;border-radius:16px;padding:36px 30px;box-shadow:0 24px 64px rgba(0,0,0,.8);flex-shrink:0;}
+.pa-logo{text-align:center;margin-bottom:20px;}
+.pa-logo-icon{font-size:36px;margin-bottom:8px;}
+.pa-logo-title{font-size:19px;font-weight:800;color:#e6edf3;letter-spacing:-.3px;}
+.pa-logo-sub{font-size:10px;color:#8b949e;margin-top:3px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;}
+.pa-title{font-size:13px;font-weight:700;color:#e6edf3;text-align:center;margin-bottom:14px;}
+.pa-field{margin-bottom:12px;}
+.pa-label{display:block;font-size:11px;font-weight:600;color:#8b949e;margin-bottom:5px;letter-spacing:.3px;}
+.pa-input{width:100%;background:#21262d;border:1px solid #30363d;border-radius:8px;padding:9px 12px;color:#e6edf3;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;box-sizing:border-box;}
+.pa-input:focus{border-color:#388bfd;}
+.pa-btn{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;background:#238636;color:#fff;margin-top:6px;transition:background .15s,transform .1s;letter-spacing:.2px;}
+.pa-btn:hover{background:#2ea043;}
+.pa-btn:active{transform:scale(.98);}
+.pa-btn.ghost{background:transparent;border:1px solid #30363d;color:#8b949e;margin-top:8px;}
+.pa-btn.ghost:hover{background:#21262d;color:#e6edf3;}
+.pa-divider{text-align:center;color:#484f58;font-size:11px;margin:12px 0;position:relative;}
+.pa-divider::before,.pa-divider::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:#21262d;}
+.pa-divider::before{left:0;}.pa-divider::after{right:0;}
+.pa-msg{border-radius:7px;padding:8px 11px;font-size:12px;margin-bottom:12px;display:none;line-height:1.5;}
+.pa-msg.err{background:rgba(255,66,66,.1);border:1px solid #ff4242;color:#ff4242;}
+.pa-msg.ok{background:rgba(0,189,3,.1);border:1px solid #00bd03;color:#00bd03;}
+.pa-msg.info{background:rgba(56,139,253,.1);border:1px solid #388bfd;color:#388bfd;}
+.pa-hint{font-size:10px;color:#8b949e;margin-top:3px;line-height:1.5;}
+.pa-footer{text-align:center;margin-top:12px;}
+.pa-link{background:none;border:none;color:#388bfd;cursor:pointer;font-size:11px;font-family:inherit;text-decoration:underline;padding:0;}
+.pa-link:hover{color:#e6edf3;}
+.pa-spin-wrap{display:none;text-align:center;padding:6px 0;font-size:11px;color:#8b949e;}
+.pa-spin{display:inline-block;width:12px;height:12px;border:2px solid #30363d;border-top-color:#388bfd;border-radius:50%;animation:paSpin .7s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes paSpin{to{transform:rotate(360deg);}}
+/* Disconnect confirm modal */
+.dc-opt{width:100%;padding:11px 14px;border-radius:8px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:13px;font-family:inherit;cursor:pointer;text-align:left;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;transition:background .15s,border-color .15s;}
+.dc-opt:hover{background:#2d333b;border-color:#484f58;}
+.dc-opt.danger{border-color:rgba(255,66,66,.3);}
+.dc-opt.danger:hover{background:rgba(255,66,66,.06);border-color:#ff4242;}
+.dc-opt-icon{font-size:18px;flex-shrink:0;}
+.dc-opt-title{font-weight:700;font-size:12px;margin-bottom:2px;}
+.dc-opt-desc{font-size:10px;color:#8b949e;line-height:1.5;}
+</style>
 </head>
 <body>
-<!-- ══════════════════════════════════════
-     AUTH OVERLAY — SIPETA K3
-     ══════════════════════════════════════ -->
-<div id="auth-overlay" style="display:flex">
+<!-- ══════════════════════════════════════════════
+     PRE-AUTH — Visible by default, hides after login
+     Setup card shown immediately without any JS
+     ══════════════════════════════════════════════ -->
+<div id="pre-auth">
 
-  <!-- SCREEN 1: SETUP (first-time Firebase config) -->
-  <div id="auth-screen-setup" class="auth-card" style="display:block">
-    <div class="auth-logo">
-      <div class="auth-logo-icon">🗺️</div>
-      <div class="auth-logo-title">SIPETA K3</div>
-      <div class="auth-logo-sub">Sistem Informasi Pemetaan Bahaya K3</div>
+  <!-- SETUP SCREEN (default visible) -->
+  <div id="pa-setup" class="pa-card">
+    <div class="pa-logo">
+      <div class="pa-logo-icon">🗺️</div>
+      <div class="pa-logo-title">SIPETA K3</div>
+      <div class="pa-logo-sub">Sistem Informasi Pemetaan Bahaya K3</div>
     </div>
-    <div class="auth-screen-title">Konfigurasi Firebase</div>
-    <div class="auth-msg info" id="setup-msg" style="display:block">
-      Masukkan konfigurasi Firebase project Anda. Data ini hanya disimpan di browser Anda dan tidak dikirim ke pihak lain.
+    <div class="pa-title">Konfigurasi Firebase</div>
+    <div class="pa-msg info" id="pa-setup-info" style="display:block">
+      Masukkan konfigurasi Firebase project Anda. Data disimpan di browser dan tidak dikirim ke pihak lain.
     </div>
-    <div class="auth-msg error" id="setup-error"></div>
-    <div class="auth-field">
-      <label class="auth-label">Firebase API Key *</label>
-      <input class="auth-input" id="setup-apikey" type="text" placeholder="AIzaSy...">
-      <div class="auth-hint-text">Firebase Console → Project Settings → General → Web API Key</div>
+    <div class="pa-msg err" id="pa-setup-err"></div>
+    <div class="pa-field">
+      <label class="pa-label">Firebase API Key *</label>
+      <input class="pa-input" id="pa-apikey" type="text" placeholder="AIzaSy...">
+      <div class="pa-hint">Firebase Console → Project Settings → General → Web API Key</div>
     </div>
-    <div class="auth-field">
-      <label class="auth-label">Firebase Project ID *</label>
-      <input class="auth-input" id="setup-projectid" type="text" placeholder="nama-project-firebase">
-      <div class="auth-hint-text">Contoh: webgis-k3-atp-ipb (lihat di Firebase Console → Project Settings)</div>
+    <div class="pa-field">
+      <label class="pa-label">Firebase Project ID *</label>
+      <input class="pa-input" id="pa-projectid" type="text" placeholder="nama-project-firebase">
+      <div class="pa-hint">Contoh: webgis-k3-atp-ipb</div>
     </div>
-    <div class="auth-loading" id="setup-loading"><span class="auth-spin"></span>Menghubungkan ke Firebase...</div>
-    <button class="auth-btn" onclick="saveAuthSetup()">Simpan &amp; Lanjutkan →</button>
+    <div class="pa-field">
+      <label class="pa-label">Firebase Database URL *</label>
+      <input class="pa-input" id="pa-dburl" type="text" placeholder="https://nama-project.firebaseio.com">
+      <div class="pa-hint">Firebase Console → Realtime Database → URL yang tertera di bagian atas</div>
+    </div>
+    <div class="pa-spin-wrap" id="pa-setup-spin"><span class="pa-spin"></span>Menghubungkan ke Firebase...</div>
+    <button class="pa-btn" onclick="paSetupSave()">Simpan &amp; Lanjutkan →</button>
   </div>
 
-  <!-- SCREEN 2: LOGIN -->
-  <div id="auth-screen-login" class="auth-card" style="display:none">
-    <div class="auth-logo">
-      <div class="auth-logo-icon">🗺️</div>
-      <div class="auth-logo-title">SIPETA K3</div>
-      <div class="auth-logo-sub">Sistem Informasi Pemetaan Bahaya K3</div>
+  <!-- LOGIN SCREEN (hidden initially) -->
+  <div id="pa-login" class="pa-card" style="display:none">
+    <div class="pa-logo">
+      <div class="pa-logo-icon">🗺️</div>
+      <div class="pa-logo-title">SIPETA K3</div>
+      <div class="pa-logo-sub">Sistem Informasi Pemetaan Bahaya K3</div>
     </div>
-    <div class="auth-screen-title">Masuk ke Akun</div>
-    <div class="auth-msg error" id="login-error"></div>
-    <div class="auth-msg success" id="login-success"></div>
-    <div class="auth-field">
-      <label class="auth-label">Username atau Alamat Email</label>
-      <input class="auth-input" id="login-user" type="text" placeholder="username atau email@domain.com"
-        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    <div class="pa-title">Masuk ke Akun</div>
+    <div class="pa-msg err" id="pa-login-err"></div>
+    <div class="pa-msg ok"  id="pa-login-ok"></div>
+    <div class="pa-field">
+      <label class="pa-label">Username atau Alamat Email</label>
+      <input class="pa-input" id="pa-login-user" type="text" placeholder="username atau email@domain.com"
+        onkeydown="if(event.key==='Enter')document.getElementById('pa-login-pass').focus()">
     </div>
-    <div class="auth-field">
-      <label class="auth-label">Kata Sandi</label>
-      <input class="auth-input" id="login-pass" type="password" placeholder="••••••••"
-        onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="pa-field">
+      <label class="pa-label">Kata Sandi</label>
+      <input class="pa-input" id="pa-login-pass" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')paLogin()">
     </div>
-    <div class="auth-loading" id="login-loading"><span class="auth-spin"></span>Memverifikasi akun...</div>
-    <button class="auth-btn" onclick="doLogin()">Masuk</button>
-    <div class="auth-divider">atau</div>
-    <button class="auth-btn ghost" onclick="showAuthScreen('register')">Buat Akun Baru</button>
-    <div class="auth-footer">
-      <button class="auth-link-btn" onclick="showAuthScreen('setup')" style="font-size:10px">⚙️ Ubah konfigurasi Firebase</button>
+    <div class="pa-spin-wrap" id="pa-login-spin"><span class="pa-spin"></span>Memverifikasi akun...</div>
+    <button class="pa-btn" onclick="paLogin()">Masuk</button>
+    <div class="pa-divider">atau</div>
+    <button class="pa-btn ghost" onclick="paShow('register')">Buat Akun Baru</button>
+    <div class="pa-footer">
+      <button class="pa-link" onclick="paShow('setup')">⚙️ Ubah konfigurasi Firebase</button>
     </div>
   </div>
 
-  <!-- SCREEN 3: REGISTER -->
-  <div id="auth-screen-register" class="auth-card" style="display:none">
-    <div class="auth-logo">
-      <div class="auth-logo-icon">🗺️</div>
-      <div class="auth-logo-title">SIPETA K3</div>
-      <div class="auth-logo-sub">Daftar Akun Baru</div>
+  <!-- REGISTER SCREEN (hidden initially) -->
+  <div id="pa-register" class="pa-card" style="display:none">
+    <div class="pa-logo">
+      <div class="pa-logo-icon">🗺️</div>
+      <div class="pa-logo-title">SIPETA K3</div>
+      <div class="pa-logo-sub">Daftar Akun Baru</div>
     </div>
-    <div class="auth-screen-title">Buat Akun</div>
-    <div class="auth-msg error" id="reg-error"></div>
-    <div class="auth-msg success" id="reg-success"></div>
-    <div class="auth-field">
-      <label class="auth-label">Nama Pengguna (Username) *</label>
-      <input class="auth-input" id="reg-username" type="text" placeholder="nama_pengguna (tanpa spasi)"
+    <div class="pa-title">Buat Akun</div>
+    <div class="pa-msg err" id="pa-reg-err"></div>
+    <div class="pa-msg ok"  id="pa-reg-ok"></div>
+    <div class="pa-field">
+      <label class="pa-label">Nama Pengguna (Username) *</label>
+      <input class="pa-input" id="pa-reg-user" type="text" placeholder="nama_pengguna"
         oninput="this.value=this.value.replace(/\s/g,'_').toLowerCase()">
-      <div class="auth-hint-text">Hanya huruf, angka, dan garis bawah. Contoh: budi_ipb</div>
+      <div class="pa-hint">Hanya huruf kecil, angka, garis bawah. Contoh: budi_ipb</div>
     </div>
-    <div class="auth-field">
-      <label class="auth-label">Alamat Email *</label>
-      <input class="auth-input" id="reg-email" type="email" placeholder="email@domain.com">
+    <div class="pa-field">
+      <label class="pa-label">Alamat Email *</label>
+      <input class="pa-input" id="pa-reg-email" type="email" placeholder="email@domain.com">
     </div>
-    <div class="auth-field">
-      <label class="auth-label">Kata Sandi *</label>
-      <input class="auth-input" id="reg-password" type="password" placeholder="Minimal 6 karakter">
+    <div class="pa-field">
+      <label class="pa-label">Kata Sandi *</label>
+      <input class="pa-input" id="pa-reg-pass" type="password" placeholder="Minimal 6 karakter">
     </div>
-    <div class="auth-field">
-      <label class="auth-label">Konfirmasi Kata Sandi *</label>
-      <input class="auth-input" id="reg-confirm" type="password" placeholder="Ulangi kata sandi"
-        onkeydown="if(event.key==='Enter')doRegister()">
+    <div class="pa-field">
+      <label class="pa-label">Konfirmasi Kata Sandi *</label>
+      <input class="pa-input" id="pa-reg-conf" type="password" placeholder="Ulangi kata sandi"
+        onkeydown="if(event.key==='Enter')paRegister()">
     </div>
-    <div class="auth-loading" id="reg-loading"><span class="auth-spin"></span>Mendaftarkan akun...</div>
-    <button class="auth-btn" onclick="doRegister()">Daftar</button>
-    <div class="auth-divider">sudah punya akun?</div>
-    <button class="auth-btn ghost" onclick="showAuthScreen('login')">Masuk</button>
+    <div class="pa-spin-wrap" id="pa-reg-spin"><span class="pa-spin"></span>Mendaftarkan akun...</div>
+    <button class="pa-btn" onclick="paRegister()">Daftar</button>
+    <div class="pa-divider">sudah punya akun?</div>
+    <button class="pa-btn ghost" onclick="paShow('login')">Masuk</button>
   </div>
 
-</div><!-- /auth-overlay -->
-
-<!-- DISCONNECT CONFIRM POPUP -->
-<div class="modal-overlay" id="modal-disconnect-confirm">
-  <div class="modal" style="max-width:380px">
-    <div class="modal-header">
-      <div style="font-size:16px">🔌</div>
-      <div class="modal-title">Putuskan Sinkronisasi</div>
-      <button class="modal-close" onclick="closeModal('modal-disconnect-confirm')">✕</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">
-        Sinkronisasi akan diputus sepenuhnya. Semua perubahan yang telah Anda buat selama sinkronisasi aktif <strong style="color:var(--text)">sudah tersimpan di Firebase</strong>. Pilih apa yang ingin dilakukan dengan data yang ditampilkan dari database:
-      </p>
-      <button class="dc-option-btn" onclick="executeDisconnect(true)">
-        <div class="dc-option-icon">📌</div>
-        <div>
-          <div class="dc-option-title">Pertahankan Data di Peta</div>
-          <div class="dc-option-desc">Data dari database tetap terlihat di peta setelah sinkronisasi diputus. Perubahan selanjutnya hanya bersifat lokal.</div>
-        </div>
-      </button>
-      <button class="dc-option-btn danger" onclick="executeDisconnect(false)">
-        <div class="dc-option-icon">🗑</div>
-        <div>
-          <div class="dc-option-title">Hapus Data Sinkronisasi dari Peta</div>
-          <div class="dc-option-desc">Mengembalikan peta ke kondisi sebelum sinkronisasi dimulai. Data di Firebase <strong>tidak akan terhapus</strong>.</div>
-        </div>
-      </button>
-    </div>
-    <div class="modal-footer">
-      <button class="mf-btn cancel" onclick="closeModal('modal-disconnect-confirm')">Batal</button>
-    </div>
-  </div>
-</div>
+</div><!-- /pre-auth -->
 
 <div id="app">
  
@@ -720,8 +688,8 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
   <button id="sync-status-btn" class="tbtn" onclick="openModal('modal-sync')" title="Sinkronisasi Real-Time">🔌 Offline</button>
   <button class="tbtn gem" onclick="openModal('modal-gemini')">✦ Gemini</button>
   <div class="topbar-divider"></div>
-  <button id="btn-user-logout" class="tbtn" onclick="showLogoutConfirm()" title="Klik untuk keluar" style="display:none;gap:4px;align-items:center">
-    <span>👤</span><span id="topbar-username" style="font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  <button id="btn-logout" class="tbtn" onclick="paLogout()" title="Keluar dari akun" style="display:none;gap:4px;align-items:center">
+    <span>👤</span><span id="topbar-uname" style="font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
   </button>
   <button class="tbtn" onclick="toggleSidebar()">☰</button>
 </div>
@@ -1394,7 +1362,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
       <!-- Action buttons -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button class="mf-btn save" style="flex:2" onclick="connectSync()">🔗 Hubungkan &amp; Sinkronkan</button>
-        <button class="mf-btn danger" style="flex:1" onclick="openModal('modal-disconnect-confirm')" title="Putuskan sinkronisasi — pilih apakah data tetap dipertahankan atau dihapus dari peta">🔌 Putuskan &amp; Hapus Konfigurasi</button>
+        <button class="mf-btn danger" style="flex:1" onclick="openModal('modal-disconnect-confirm')" title="Putuskan sinkronisasi — pilih apakah data tetap dipertahankan atau dihapus">🔌 Putuskan &amp; Hapus Konfigurasi</button>
       </div>
 
       <!-- Cloud TIF Files -->
@@ -1513,8 +1481,6 @@ let tifRawBuffers  = [];
 
 // ── FIREBASE REAL-TIME SYNC ───────────────────────────────────
 let fbSyncEnabled = false, fbDb = null, fbRoomRef = null, fbIgnoreNext = false;
-// Pre-sync snapshot — stores state BEFORE sync started, used to restore on disconnect
-let _preSyncFacilities = null, _preSyncDangerZones = null, _preSyncLinkMap = null;
 let _pushDebounceTimer = null; // debounce Firebase pushes
 
 // ── EXPORT UI STATE ──────────────────────────────────────────
@@ -3429,17 +3395,9 @@ function initFirebaseSync() {
   if (typeof firebase === 'undefined') { showToast('⚠️ Firebase SDK belum termuat'); return; }
 
   try {
-    // Save snapshot BEFORE cloud data overwrites local data
-    _preSyncFacilities = JSON.parse(JSON.stringify(facilities));
-    _preSyncDangerZones = JSON.parse(JSON.stringify(dangerZones));
-    _preSyncLinkMap = JSON.parse(JSON.stringify(linkMap));
-
-    // Initialize default Firebase app — check explicitly for [DEFAULT] to avoid
-    // conflict with the named 'sipeta-auth' app used for authentication
-    let defaultAppExists = false;
-    try { firebase.app(); defaultAppExists = true; } catch(e) { defaultAppExists = false; }
-    if (!defaultAppExists) { firebase.initializeApp(conf); }
-
+    if (!firebase.apps || !firebase.apps.length) {
+      firebase.initializeApp(conf);
+    }
     fbDb = firebase.database();
     fbRoomRef = fbDb.ref('k3rooms/' + room);
 
@@ -3483,40 +3441,19 @@ function initFirebaseSync() {
   }
 }
 
-// Called by the popup modal buttons
-function executeDisconnect(keepData) {
-  closeModal('modal-disconnect-confirm');
-  disconnectSync(keepData);
-}
-
-function disconnectSync(keepData = true) {
+function disconnectSync() {
   // 1. Putuskan listener Firebase
   if (fbRoomRef) { try { fbRoomRef.off(); } catch(e){} }
   fbSyncEnabled = false; fbDb = null; fbRoomRef = null;
 
-  // 2. Jika user pilih HAPUS data sinkronisasi → kembalikan ke snapshot sebelum sync
-  if (!keepData && _preSyncFacilities !== null) {
-    facilities  = JSON.parse(JSON.stringify(_preSyncFacilities));
-    dangerZones = JSON.parse(JSON.stringify(_preSyncDangerZones));
-    linkMap     = JSON.parse(JSON.stringify(_preSyncLinkMap));
-    save();
-    renderAll();
-    showToast('🗑 Data sinkronisasi dihapus dari peta — Firebase tidak terpengaruh');
-  } else {
-    showToast('📌 Data sinkronisasi dipertahankan di peta');
-  }
-
-  // 3. Bersihkan snapshot
-  _preSyncFacilities = null; _preSyncDangerZones = null; _preSyncLinkMap = null;
-
-  // 4. Hapus kredensial dari localStorage → reload TIDAK akan reconnect
+  // 2. Hapus kredensial dari localStorage → reload TIDAK akan reconnect
   localStorage.removeItem('k3_firebase');
   localStorage.removeItem('k3_room');
 
-  // 5. Pasang flag eksplisit → initFirebaseSync() tidak akan auto-reconnect
+  // 3. Pasang flag eksplisit → initFirebaseSync() tidak akan auto-reconnect
   localStorage.setItem('k3_sync_off', '1');
 
-  // 6. Update UI
+  // 4. Update UI
   updateSyncBadge(false);
   const banner = document.getElementById('sync-banner');
   if (banner) {
@@ -3524,10 +3461,12 @@ function disconnectSync(keepData = true) {
     banner.textContent = '🔌 Terputus · Semua perubahan hanya tersimpan lokal';
   }
 
-  // 7. Kosongkan kolom input di modal agar tidak ada sisa konfigurasi lama
+  // 5. Kosongkan kolom input di modal agar tidak ada sisa konfigurasi lama
   ['sync-fb-url','sync-fb-apikey','sync-fb-projectid','sync-room-code'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+
+  showToast('🔌 Sinkronisasi dinonaktifkan — tidak akan reconnect saat reload');
 }
 
 function pushToCloud() {
@@ -4161,316 +4100,461 @@ function updateDangerLabelSize(px) {
   });
 }
  
-// ════════════════════════════════════════════════════════════
-//  SIPETA K3 — AUTH SYSTEM (Firebase Authentication + Firestore)
-// ════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+//  PRE-SYNC SNAPSHOT — simpan data sebelum sinkronisasi dimulai
+// ═══════════════════════════════════════════════════════════════
+let _preSyncFac = null, _preSyncDz = null, _preSyncLm = null;
 
-const AUTH_APP_NAME = 'sipeta-auth';
-let _authApp   = null;
-let _authFire  = null; // Firestore instance for user data
-let _authInst  = null; // firebase.auth() instance
+// ═══════════════════════════════════════════════════════════════
+//  AUTH SYSTEM — Firebase Auth + RTDB username storage
+// ═══════════════════════════════════════════════════════════════
+var _authInst = null;   // firebase.auth() instance
+var _authDb   = null;   // firebase.database() for username storage
 
-// ── Helpers ─────────────────────────────────────────────────
-function showAuthScreen(screen) {
-  ['setup','login','register'].forEach(s => {
-    const el = document.getElementById('auth-screen-' + s);
-    if (el) el.style.display = (s === screen) ? 'block' : 'none';
-  });
-  // Clear messages on screen switch
-  ['setup-error','login-error','login-success','reg-error','reg-success'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.style.display='none'; el.textContent=''; }
-  });
-  ['setup-loading','login-loading','reg-loading'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
-}
-
-function _showMsg(id, text, show=true) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = text;
-  el.style.display = show ? 'block' : 'none';
-}
-function _setLoading(id, show) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = show ? 'block' : 'none';
-}
-
-function _translateFbError(code) {
-  const map = {
+/* Terjemahkan kode error Firebase ke Bahasa Indonesia */
+function _fbErr(code) {
+  var m = {
     'auth/user-not-found'       : 'Akun tidak ditemukan.',
     'auth/wrong-password'       : 'Kata sandi salah.',
     'auth/invalid-email'        : 'Format email tidak valid.',
-    'auth/email-already-in-use' : 'Email sudah digunakan.',
-    'auth/weak-password'        : 'Kata sandi terlalu lemah (min. 6 karakter).',
-    'auth/too-many-requests'    : 'Terlalu banyak percobaan. Coba lagi nanti.',
-    'auth/network-request-failed': 'Gagal terhubung ke server. Periksa koneksi internet.',
+    'auth/email-already-in-use' : 'Email sudah digunakan oleh akun lain.',
+    'auth/weak-password'        : 'Kata sandi terlalu lemah (minimal 6 karakter).',
+    'auth/too-many-requests'    : 'Terlalu banyak percobaan. Tunggu beberapa saat.',
+    'auth/network-request-failed': 'Gagal terhubung. Periksa koneksi internet.',
     'auth/invalid-credential'   : 'Email atau kata sandi salah.',
     'auth/user-disabled'        : 'Akun ini telah dinonaktifkan.'
   };
-  return map[code] || 'Terjadi kesalahan. Kode: ' + code;
+  return m[code] || ('Error: ' + (code || 'tidak diketahui'));
 }
 
-// ── Firebase Auth Initialization ────────────────────────────
-function initAuthApp(apiKey, projectId) {
+/* Tampilkan / sembunyikan pesan di pre-auth */
+function _paMsg(id, text, show) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.display = (show && text) ? 'block' : 'none';
+}
+function _paSpin(id, show) {
+  var el = document.getElementById(id);
+  if (el) el.style.display = show ? 'block' : 'none';
+}
+
+/* Tampilkan salah satu screen pre-auth */
+function paShow(screen) {
+  var screens = { setup:'pa-setup', login:'pa-login', register:'pa-register' };
+  Object.values(screens).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  var target = screens[screen];
+  if (target) {
+    var el = document.getElementById(target);
+    if (el) el.style.display = 'block';
+  }
+  // Reset semua pesan error saat pindah screen
+  ['pa-setup-err','pa-login-err','pa-login-ok','pa-reg-err','pa-reg-ok'].forEach(function(id) {
+    _paMsg(id, '', false);
+  });
+  ['pa-setup-spin','pa-login-spin','pa-reg-spin'].forEach(function(id) {
+    _paSpin(id, false);
+  });
+}
+
+/* Inisialisasi Firebase (default app) untuk auth + RTDB */
+function _initFirebaseForAuth(apiKey, projectId, dbUrl) {
   try {
-    const existing = firebase.apps.find(a => a.name === AUTH_APP_NAME);
-    _authApp  = existing || firebase.initializeApp(
-      { apiKey, authDomain: projectId + '.firebaseapp.com', projectId },
-      AUTH_APP_NAME
-    );
-    _authFire = firebase.firestore(_authApp);
-    _authInst = firebase.auth(_authApp);
+    // Cek apakah default app sudah ada (bisa dari sync sebelumnya)
+    var appExists = false;
+    try { firebase.app(); appExists = true; } catch(e) { appExists = false; }
+
+    if (!appExists) {
+      firebase.initializeApp({
+        apiKey: apiKey,
+        authDomain: projectId + '.firebaseapp.com',
+        databaseURL: dbUrl,
+        projectId: projectId
+      });
+    }
+    _authInst = firebase.auth();
+    _authDb   = firebase.database();
     return true;
   } catch(e) {
-    console.error('Auth init error:', e);
+    console.error('Firebase auth init error:', e);
     return false;
   }
 }
 
-// ── SETUP SCREEN ─────────────────────────────────────────────
-function saveAuthSetup() {
-  var apiKey    = (document.getElementById('setup-apikey')?.value || '').trim();
-  var projectId = (document.getElementById('setup-projectid')?.value || '').trim();
-  if (!apiKey || !projectId) {
-    _showMsg('setup-error','⚠️ API Key dan Project ID wajib diisi.');
-    return;
+/* ── SETUP: simpan konfigurasi & inisialisasi Firebase ── */
+function paSetupSave() {
+  var apiKey    = (document.getElementById('pa-apikey')    || {value:''}).value.trim();
+  var projectId = (document.getElementById('pa-projectid') || {value:''}).value.trim();
+  var dbUrl     = (document.getElementById('pa-dburl')     || {value:''}).value.trim();
+
+  _paMsg('pa-setup-err', '', false);
+  if (!apiKey || !projectId || !dbUrl) {
+    _paMsg('pa-setup-err', '⚠️ Semua field wajib diisi.', true); return;
   }
-  _showMsg('setup-error','', false);
-  _setLoading('setup-loading', true);
+  if (!dbUrl.startsWith('https://')) {
+    _paMsg('pa-setup-err', '⚠️ Database URL harus diawali https://', true); return;
+  }
+
+  _paSpin('pa-setup-spin', true);
 
   var ok = false;
-  try { ok = initAuthApp(apiKey, projectId); } catch(e) { ok = false; }
+  try { ok = _initFirebaseForAuth(apiKey, projectId, dbUrl); } catch(e) { ok = false; }
 
   if (!ok) {
-    _setLoading('setup-loading', false);
-    _showMsg('setup-error','❌ Konfigurasi tidak valid. Periksa API Key dan Project ID Anda, lalu coba lagi.');
+    _paSpin('pa-setup-spin', false);
+    _paMsg('pa-setup-err', '❌ Konfigurasi tidak valid. Periksa API Key, Project ID, dan Database URL.', true);
     return;
   }
+
+  // Simpan konfigurasi ke localStorage
   try {
-    localStorage.setItem('k3_auth_config', JSON.stringify({ apiKey, projectId }));
+    localStorage.setItem('k3_auth_config', JSON.stringify({ apiKey: apiKey, projectId: projectId, dbUrl: dbUrl }));
   } catch(e) {}
 
-  // Listen auth state
-  try {
-    _authInst.onAuthStateChanged(function(user) {
-      _setLoading('setup-loading', false);
-      if (user) { _onUserLoggedIn(user); }
-      else { showAuthScreen('login'); }
-    });
-  } catch(e) {
-    _setLoading('setup-loading', false);
-    showAuthScreen('login');
-  }
+  // Cek status login
+  _authInst.onAuthStateChanged(function(user) {
+    _paSpin('pa-setup-spin', false);
+    if (user) { _paOnLogin(user); }
+    else { paShow('login'); }
+  });
 }
 
-// ── LOGIN ────────────────────────────────────────────────────
-async function doLogin() {
-  const raw  = (document.getElementById('login-user')?.value || '').trim();
-  const pass = document.getElementById('login-pass')?.value || '';
-  _showMsg('login-error','', false);
-  _showMsg('login-success','', false);
-  if (!raw || !pass) { _showMsg('login-error','⚠️ Isi semua field terlebih dahulu.'); return; }
+/* ── LOGIN ── */
+async function paLogin() {
+  var raw  = (document.getElementById('pa-login-user') || {value:''}).value.trim();
+  var pass = (document.getElementById('pa-login-pass') || {value:''}).value;
+  _paMsg('pa-login-err', '', false);
+  _paMsg('pa-login-ok',  '', false);
 
-  _setLoading('login-loading', true);
-  let email = raw;
+  if (!raw || !pass) { _paMsg('pa-login-err', '⚠️ Isi semua field.', true); return; }
+  if (!_authInst)    { _paMsg('pa-login-err', '⚠️ Firebase belum dikonfigurasi.', true); return; }
 
-  // If input is username (no @) → look up email from Firestore
-  if (!raw.includes('@')) {
+  _paSpin('pa-login-spin', true);
+  var email = raw;
+
+  // Jika bukan email → cari email dari username di RTDB
+  if (raw.indexOf('@') === -1) {
     try {
-      const snap = await _authFire.collection('usernames').doc(raw).get();
-      if (!snap.exists) {
-        _setLoading('login-loading', false);
-        _showMsg('login-error','❌ Username tidak ditemukan.');
-        return;
+      var snap = await _authDb.ref('k3-auth/usernames/' + raw).get();
+      if (!snap.exists()) {
+        _paSpin('pa-login-spin', false);
+        _paMsg('pa-login-err', '❌ Username tidak ditemukan.', true); return;
       }
-      email = snap.data().email;
+      email = snap.val().email;
     } catch(e) {
-      _setLoading('login-loading', false);
-      _showMsg('login-error','❌ Gagal memeriksa username: ' + e.message);
-      return;
+      _paSpin('pa-login-spin', false);
+      _paMsg('pa-login-err', '❌ Gagal memeriksa username: ' + e.message, true); return;
     }
   }
 
   try {
     await _authInst.signInWithEmailAndPassword(email, pass);
-    // onAuthStateChanged will handle success
+    // onAuthStateChanged akan menangani langkah selanjutnya
   } catch(e) {
-    _setLoading('login-loading', false);
-    _showMsg('login-error','❌ ' + _translateFbError(e.code));
+    _paSpin('pa-login-spin', false);
+    _paMsg('pa-login-err', '❌ ' + _fbErr(e.code), true);
   }
 }
 
-// ── REGISTER ─────────────────────────────────────────────────
-async function doRegister() {
-  const username  = (document.getElementById('reg-username')?.value || '').trim();
-  const email     = (document.getElementById('reg-email')?.value || '').trim();
-  const pass      = document.getElementById('reg-password')?.value || '';
-  const passConf  = document.getElementById('reg-confirm')?.value || '';
-  _showMsg('reg-error','', false);
-  _showMsg('reg-success','', false);
+/* ── REGISTER ── */
+async function paRegister() {
+  var uname = (document.getElementById('pa-reg-user')  || {value:''}).value.trim();
+  var email = (document.getElementById('pa-reg-email') || {value:''}).value.trim();
+  var pass  = (document.getElementById('pa-reg-pass')  || {value:''}).value;
+  var conf  = (document.getElementById('pa-reg-conf')  || {value:''}).value;
+  _paMsg('pa-reg-err', '', false);
+  _paMsg('pa-reg-ok',  '', false);
 
-  // Validasi
-  if (!username || !email || !pass || !passConf) {
-    _showMsg('reg-error','⚠️ Semua field wajib diisi.'); return;
+  if (!uname || !email || !pass || !conf) {
+    _paMsg('pa-reg-err', '⚠️ Semua field wajib diisi.', true); return;
   }
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-    _showMsg('reg-error','⚠️ Username hanya boleh berisi huruf, angka, dan garis bawah.'); return;
+  if (!/^[a-z0-9_]+$/.test(uname)) {
+    _paMsg('pa-reg-err', '⚠️ Username hanya boleh berisi huruf kecil, angka, dan garis bawah.', true); return;
   }
-  if (!email.includes('@') || !email.includes('.')) {
-    _showMsg('reg-error','⚠️ Format email tidak valid. Pastikan mengandung "@" dan domain.'); return;
+  if (email.indexOf('@') === -1 || email.indexOf('.') === -1) {
+    _paMsg('pa-reg-err', '⚠️ Format email tidak valid. Harus mengandung "@" dan domain.', true); return;
   }
   if (pass.length < 6) {
-    _showMsg('reg-error','⚠️ Kata sandi minimal 6 karakter.'); return;
+    _paMsg('pa-reg-err', '⚠️ Kata sandi minimal 6 karakter.', true); return;
   }
-  if (pass !== passConf) {
-    _showMsg('reg-error','⚠️ Konfirmasi kata sandi tidak cocok.'); return;
+  if (pass !== conf) {
+    _paMsg('pa-reg-err', '⚠️ Konfirmasi kata sandi tidak cocok.', true); return;
+  }
+  if (!_authInst) {
+    _paMsg('pa-reg-err', '⚠️ Firebase belum dikonfigurasi.', true); return;
   }
 
-  _setLoading('reg-loading', true);
+  _paSpin('pa-reg-spin', true);
 
-  // Cek username unik
+  // Cek keunikan username di RTDB
   try {
-    const uSnap = await _authFire.collection('usernames').doc(username).get();
-    if (uSnap.exists) {
-      _setLoading('reg-loading', false);
-      _showMsg('reg-error','❌ Nama Pengguna "' + username + '" sudah digunakan. Pilih yang lain.'); return;
+    var uSnap = await _authDb.ref('k3-auth/usernames/' + uname).get();
+    if (uSnap.exists()) {
+      _paSpin('pa-reg-spin', false);
+      _paMsg('pa-reg-err', '❌ Username "' + uname + '" sudah digunakan. Pilih nama lain.', true); return;
     }
   } catch(e) {
-    _setLoading('reg-loading', false);
-    _showMsg('reg-error','❌ Gagal memeriksa username: ' + e.message); return;
+    _paSpin('pa-reg-spin', false);
+    _paMsg('pa-reg-err', '❌ Gagal memeriksa username: ' + e.message, true); return;
   }
 
   // Buat akun Firebase Auth
   try {
-    const cred = await _authInst.createUserWithEmailAndPassword(email, pass);
-    const uid  = cred.user.uid;
+    var cred = await _authInst.createUserWithEmailAndPassword(email, pass);
+    var uid  = cred.user.uid;
 
-    // Simpan profil user di Firestore
-    await _authFire.collection('users').doc(uid).set({
-      username, email,
-      createdAt: new Date().toISOString()
+    // Simpan profil di RTDB
+    await _authDb.ref('k3-auth/users/' + uid).set({
+      username: uname, email: email, createdAt: new Date().toISOString()
     });
-    // Simpan pemetaan username → email (untuk login via username)
-    await _authFire.collection('usernames').doc(username).set({ uid, email });
+    // Simpan mapping username → uid + email
+    await _authDb.ref('k3-auth/usernames/' + uname).set({ uid: uid, email: email });
 
     // Kirim email verifikasi (opsional — tidak blokir login jika gagal)
     try { await cred.user.sendEmailVerification(); } catch(_) {}
 
-    _setLoading('reg-loading', false);
-    _showMsg('reg-success',
-      '✅ Akun berhasil dibuat! Email verifikasi dikirim ke ' + email +
-      '. Silakan masuk.', true);
-    // Pindah ke halaman login setelah 2 detik
-    setTimeout(() => showAuthScreen('login'), 2000);
+    _paSpin('pa-reg-spin', false);
+    _paMsg('pa-reg-ok', '✅ Akun berhasil dibuat! Silakan masuk.', true);
+    setTimeout(function() { paShow('login'); }, 2000);
 
   } catch(e) {
-    _setLoading('reg-loading', false);
-    if (e.code === 'auth/email-already-in-use') {
-      _showMsg('reg-error','❌ Alamat email "' + email + '" sudah digunakan.');
-    } else {
-      _showMsg('reg-error','❌ ' + _translateFbError(e.code));
-    }
+    _paSpin('pa-reg-spin', false);
+    var msg = (e.code === 'auth/email-already-in-use')
+      ? '❌ Email "' + email + '" sudah digunakan oleh akun lain.'
+      : '❌ ' + _fbErr(e.code);
+    _paMsg('pa-reg-err', msg, true);
   }
 }
 
-// ── AUTH STATE HANDLER ───────────────────────────────────────
-function _onUserLoggedIn(user) {
-  // Sembunyikan overlay auth, tampilkan app
-  const overlay = document.getElementById('auth-overlay');
-  if (overlay) overlay.style.display = 'none';
-
-  // Ambil username dari Firestore untuk topbar
-  _authFire.collection('users').doc(user.uid).get().then(snap => {
-    const name = snap.exists ? (snap.data().username || user.email) : user.email;
-    const btn  = document.getElementById('btn-user-logout');
-    const span = document.getElementById('topbar-username');
-    if (btn)  { btn.style.display  = 'inline-flex'; }
-    if (span) { span.textContent   = name; }
-  }).catch(() => {
-    const btn = document.getElementById('btn-user-logout');
-    if (btn) { btn.style.display = 'inline-flex'; }
-    const span = document.getElementById('topbar-username');
+/* ── SETELAH LOGIN BERHASIL ── */
+function _paOnLogin(user) {
+  // Ambil username dari RTDB
+  _authDb.ref('k3-auth/users/' + user.uid).get().then(function(snap) {
+    var name = (snap.exists() && snap.val().username) ? snap.val().username : user.email;
+    var btn  = document.getElementById('btn-logout');
+    var span = document.getElementById('topbar-uname');
+    if (btn)  btn.style.display  = 'inline-flex';
+    if (span) span.textContent   = name;
+  }).catch(function() {
+    var btn = document.getElementById('btn-logout');
+    if (btn) btn.style.display = 'inline-flex';
+    var span = document.getElementById('topbar-uname');
     if (span) span.textContent = user.email;
   });
+
+  // Sembunyikan pre-auth, tampilkan app
+  var pa = document.getElementById('pre-auth');
+  if (pa) pa.style.display = 'none';
+
+  // Perbaiki ukuran peta jika sudah diinisialisasi
+  if (typeof map !== 'undefined' && map && typeof map.invalidateSize === 'function') {
+    setTimeout(function() { map.invalidateSize(); }, 100);
+  }
 }
 
-// ── LOGOUT ───────────────────────────────────────────────────
-function showLogoutConfirm() {
-  const name = document.getElementById('topbar-username')?.textContent || '';
-  const ok = confirm('Keluar dari akun' + (name ? ' "' + name + '"' : '') + '?');
-  if (!ok) return;
+/* ── LOGOUT ── */
+function paLogout() {
+  var name = (document.getElementById('topbar-uname') || {textContent:''}).textContent;
+  if (!confirm('Keluar dari akun' + (name ? ' "' + name + '"' : '') + '?')) return;
   if (_authInst) {
-    _authInst.signOut().then(() => {
-      const overlay = document.getElementById('auth-overlay');
-      if (overlay) overlay.style.display = 'flex';
-      showAuthScreen('login');
-      const btn = document.getElementById('btn-user-logout');
+    _authInst.signOut().then(function() {
+      var pa = document.getElementById('pre-auth');
+      if (pa) pa.style.display = 'flex';
+      paShow('login');
+      var btn = document.getElementById('btn-logout');
       if (btn) btn.style.display = 'none';
     });
   }
 }
 
-// ── BOOTSTRAP — jalankan setelah semua resource selesai dimuat ──
+/* ── BOOTSTRAP: jalankan setelah semua resource selesai ── */
 window.addEventListener('load', function() {
-  try {
-    var overlay = document.getElementById('auth-overlay');
-    // Overlay sudah visible (display:flex) dari HTML — pastikan setup card tampil dulu
-    showAuthScreen('setup');
+  // Selalu tampilkan setup card dulu sebagai default aman
+  paShow('setup');
 
-    var conf = null;
-    try { conf = JSON.parse(localStorage.getItem('k3_auth_config') || 'null'); } catch(e) {}
+  var conf = null;
+  try { conf = JSON.parse(localStorage.getItem('k3_auth_config') || 'null'); } catch(e) {}
 
-    if (!conf || !conf.apiKey || !conf.projectId) {
-      // Pertama kali — tampilkan layar setup
-      showAuthScreen('setup');
-      return;
-    }
-
-    // Konfigurasi ada — inisialisasi Firebase Auth
-    var ok = false;
-    try { ok = initAuthApp(conf.apiKey, conf.projectId); } catch(e) { ok = false; }
-
-    if (!ok) {
-      // Config gagal — kembali ke setup
-      showAuthScreen('setup');
-      return;
-    }
-
-    // Tampilkan layar login sementara mengecek sesi aktif
-    showAuthScreen('login');
-
-    try {
-      _authInst.onAuthStateChanged(function(user) {
-        try {
-          if (user) {
-            _onUserLoggedIn(user);
-          } else {
-            if (overlay) overlay.style.display = 'flex';
-            showAuthScreen('login');
-          }
-        } catch(e) {
-          if (overlay) overlay.style.display = 'flex';
-          showAuthScreen('login');
-        }
-      });
-    } catch(e) {
-      showAuthScreen('login');
-    }
-
-  } catch(e) {
-    // Fallback total — pastikan setup card tetap tampil
-    try {
-      var ov = document.getElementById('auth-overlay');
-      if (ov) ov.style.display = 'flex';
-      showAuthScreen('setup');
-    } catch(_) {}
+  if (!conf || !conf.apiKey || !conf.projectId || !conf.dbUrl) {
+    paShow('setup'); return;  // Belum ada konfigurasi → tampilkan setup
   }
+
+  // Coba inisialisasi Firebase dengan konfigurasi tersimpan
+  var ok = false;
+  try { ok = _initFirebaseForAuth(conf.apiKey, conf.projectId, conf.dbUrl); } catch(e) { ok = false; }
+
+  if (!ok) { paShow('setup'); return; }
+
+  // Isi ulang field setup jika perlu
+  try {
+    var apk = document.getElementById('pa-apikey');    if (apk) apk.value = conf.apiKey;
+    var pid = document.getElementById('pa-projectid'); if (pid) pid.value = conf.projectId;
+    var dbu = document.getElementById('pa-dburl');     if (dbu) dbu.value = conf.dbUrl;
+  } catch(e) {}
+
+  paShow('login');  // Tampilkan login sementara cek sesi
+
+  _authInst.onAuthStateChanged(function(user) {
+    try {
+      if (user) { _paOnLogin(user); }
+      else {
+        var pa = document.getElementById('pre-auth');
+        if (pa) pa.style.display = 'flex';
+        paShow('login');
+      }
+    } catch(e) {
+      var pa = document.getElementById('pre-auth');
+      if (pa) pa.style.display = 'flex';
+      paShow('login');
+    }
+  });
 });
 
+/* ── DISCONNECT CONFIRM ── */
+function executeDisconnect(keepData) {
+  closeModal('modal-disconnect-confirm');
+  disconnectSync(keepData);
+}
+
+/* ── MODIFIKASI disconnectSync ── */
+// Override fungsi disconnectSync yang sudah ada agar mendukung keepData
+var _origDisconnectSync = disconnectSync;
+disconnectSync = function(keepData) {
+  if (typeof keepData === 'undefined') keepData = true;
+
+  if (fbRoomRef) { try { fbRoomRef.off(); } catch(e){} }
+  fbSyncEnabled = false; fbDb = null; fbRoomRef = null;
+
+  // Jika hapus data sinkronisasi → kembalikan ke snapshot sebelum sync
+  if (!keepData && _preSyncFac !== null) {
+    try {
+      facilities  = JSON.parse(JSON.stringify(_preSyncFac));
+      dangerZones = JSON.parse(JSON.stringify(_preSyncDz));
+      linkMap     = JSON.parse(JSON.stringify(_preSyncLm));
+      save(); renderAll();
+      showToast('🗑 Data sinkronisasi dihapus dari peta — Firebase tidak terpengaruh');
+    } catch(e) { showToast('⚠️ Gagal memulihkan data pra-sinkronisasi'); }
+  } else {
+    showToast('📌 Data sinkronisasi dipertahankan di peta');
+  }
+
+  // Bersihkan snapshot
+  _preSyncFac = null; _preSyncDz = null; _preSyncLm = null;
+
+  localStorage.removeItem('k3_firebase');
+  localStorage.removeItem('k3_room');
+  localStorage.setItem('k3_sync_off', '1');
+
+  updateSyncBadge(false);
+  var banner = document.getElementById('sync-banner');
+  if (banner) {
+    banner.className = 'sync-status-banner off';
+    banner.textContent = '🔌 Terputus · Semua perubahan hanya tersimpan lokal';
+  }
+  ['sync-fb-url','sync-fb-apikey','sync-fb-projectid','sync-room-code'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+};
+
+/* ── Patch initFirebaseSync agar tidak konflik dengan auth app ── */
+var _origInitFirebaseSync = initFirebaseSync;
+initFirebaseSync = function() {
+  if (localStorage.getItem('k3_sync_off') === '1') { updateSyncBadge(false); return; }
+  var conf = null;
+  try { conf = JSON.parse(localStorage.getItem('k3_firebase') || 'null'); } catch(e) {}
+  var room = localStorage.getItem('k3_room') || '';
+  if (!conf || !room) { updateSyncBadge(false); return; }
+  if (typeof firebase === 'undefined') { showToast('⚠️ Firebase SDK belum termuat'); return; }
+
+  try {
+    // Simpan snapshot SEBELUM data cloud menimpa data lokal
+    try {
+      _preSyncFac = JSON.parse(JSON.stringify(facilities));
+      _preSyncDz  = JSON.parse(JSON.stringify(dangerZones));
+      _preSyncLm  = JSON.parse(JSON.stringify(linkMap));
+    } catch(e) {}
+
+    // Cek default app — jika auth sudah init, gunakan yang ada
+    var appExists = false;
+    try { firebase.app(); appExists = true; } catch(e) { appExists = false; }
+    if (!appExists) { firebase.initializeApp(conf); }
+
+    fbDb = firebase.database();
+    fbRoomRef = fbDb.ref('k3rooms/' + room);
+
+    fbRoomRef.on('value', function(snapshot) {
+      if (fbIgnoreNext) { fbIgnoreNext = false; return; }
+      var data = snapshot.val();
+      if (!data || !data._ts) return;
+      if (data._ts === _lastPushTs) return;
+      applyCloudData(data);
+    }, function(err) {
+      showToast('❌ Firebase error: ' + err.message);
+      updateSyncBadge(false);
+    });
+
+    fbSyncEnabled = true;
+    updateSyncBadge(true);
+    var el_url  = document.getElementById('sync-fb-url');
+    var el_key  = document.getElementById('sync-fb-apikey');
+    var el_proj = document.getElementById('sync-fb-projectid');
+    var el_room = document.getElementById('sync-room-code');
+    if (el_url)  el_url.value  = conf.databaseURL || '';
+    if (el_key)  el_key.value  = conf.apiKey || '';
+    if (el_proj) el_proj.value = conf.projectId || '';
+    if (el_room) el_room.value = room;
+
+    showToast('🔗 Sinkronisasi aktif · Room: ' + room);
+    var banner = document.getElementById('sync-banner');
+    if (banner) {
+      banner.className = 'sync-status-banner on';
+      banner.textContent = '🔗 Terhubung · Room: ' + room + ' · Sinkronisasi aktif';
+    }
+  } catch(e) {
+    showToast('❌ Firebase error: ' + e.message);
+    updateSyncBadge(false);
+  }
+};
 
 </script>
+
+<!-- DISCONNECT CONFIRM MODAL (di dalam app agar CSS modal berlaku) -->
+<div class="modal-overlay" id="modal-disconnect-confirm">
+  <div class="modal" style="max-width:390px">
+    <div class="modal-header">
+      <div style="font-size:16px">🔌</div>
+      <div class="modal-title">Putuskan Sinkronisasi</div>
+      <button class="modal-close" onclick="closeModal('modal-disconnect-confirm')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.65;">
+        Sinkronisasi akan diputus sepenuhnya. Semua perubahan yang dibuat selama sinkronisasi aktif
+        <strong style="color:var(--text)">sudah tersimpan di Firebase</strong>.
+        Pilih apa yang ingin dilakukan dengan data yang saat ini ditampilkan dari database:
+      </p>
+      <button class="dc-opt" onclick="executeDisconnect(true)">
+        <div class="dc-opt-icon">📌</div>
+        <div>
+          <div class="dc-opt-title">Pertahankan Data di Peta</div>
+          <div class="dc-opt-desc">Data dari database tetap terlihat di peta setelah sinkronisasi diputus. Perubahan selanjutnya hanya bersifat lokal.</div>
+        </div>
+      </button>
+      <button class="dc-opt danger" onclick="executeDisconnect(false)">
+        <div class="dc-opt-icon">🗑</div>
+        <div>
+          <div class="dc-opt-title">Hapus Data Sinkronisasi dari Peta</div>
+          <div class="dc-opt-desc">Mengembalikan peta ke kondisi sebelum sinkronisasi dimulai. Data di Firebase <strong>tidak akan terhapus</strong>.</div>
+        </div>
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="mf-btn cancel" onclick="closeModal('modal-disconnect-confirm')">Batal</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
