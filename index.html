@@ -13,7 +13,7 @@
 <!-- GeoTIFF / georaster — stable CDN -->
 <script src="https://cdn.jsdelivr.net/npm/georaster@1.6.0/dist/georaster.browser.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/georaster-layer-for-leaflet@3.10.0/dist/georaster-layer-for-leaflet.min.js"></script>
-<!-- Firebase for real-time sync -->
+<!-- Firebase for real-time sync + custom auth via RTDB -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 <!-- Firebase Storage — for large GeoTIFF files (up to TB) -->
@@ -100,7 +100,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
 .risk-marker.medium{background:rgba(252,255,66,.65);border-color:var(--medium);color:#222;}
 .risk-marker.high{background:rgba(255,66,66,.65);border-color:var(--high);color:#fff;}
 .risk-marker.extreme{background:rgba(181,48,48,.65);border-color:var(--extreme);color:#fff;}
-.risk-marker.none{background:rgba(110,118,129,.2);border-color:var(--text3);color:var(--text3);}
+.risk-marker.none{background:rgba(110,118,129,.45);border-color:var(--text3);color:#e6edf3;}
 .risk-marker .pulse{position:absolute;width:100%;height:100%;border-radius:50%;border:2px solid;animation:pulse 2s infinite;top:0;left:0;}
 .risk-marker.extreme .pulse{border-color:var(--extreme);}
 .risk-marker.high .pulse{border-color:var(--high);}
@@ -519,9 +519,151 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
 .hazard-detail-header{display:flex;align-items:center;gap:6px;margin-bottom:7px;}
 .hazard-num-circle{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;font-family:var(--mono);flex-shrink:0;}
 
+/* ═══════════ PRE-AUTH OVERLAY ═══════════ */
+#pre-auth{position:fixed;inset:0;z-index:9999;background:#0d1117;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;}
+.pa-card{width:100%;max-width:400px;background:#161b22;border:1px solid #30363d;border-radius:16px;padding:36px 30px;box-shadow:0 24px 64px rgba(0,0,0,.8);flex-shrink:0;}
+.pa-logo{text-align:center;margin-bottom:20px;}
+.pa-logo-icon{font-size:36px;margin-bottom:8px;}
+.pa-logo-title{font-size:19px;font-weight:800;color:#e6edf3;letter-spacing:-.3px;}
+.pa-logo-sub{font-size:10px;color:#8b949e;margin-top:3px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;}
+.pa-title{font-size:13px;font-weight:700;color:#e6edf3;text-align:center;margin-bottom:14px;}
+.pa-field{margin-bottom:12px;}
+.pa-label{display:block;font-size:11px;font-weight:600;color:#8b949e;margin-bottom:5px;letter-spacing:.3px;}
+.pa-input{width:100%;background:#21262d;border:1px solid #30363d;border-radius:8px;padding:9px 12px;color:#e6edf3;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;box-sizing:border-box;}
+.pa-input:focus{border-color:#388bfd;}
+.pa-btn{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;background:#238636;color:#fff;margin-top:6px;transition:background .15s,transform .1s;letter-spacing:.2px;}
+.pa-btn:hover{background:#2ea043;}
+.pa-btn:active{transform:scale(.98);}
+.pa-btn.ghost{background:transparent;border:1px solid #30363d;color:#8b949e;margin-top:8px;}
+.pa-btn.ghost:hover{background:#21262d;color:#e6edf3;}
+.pa-divider{text-align:center;color:#484f58;font-size:11px;margin:12px 0;position:relative;}
+.pa-divider::before,.pa-divider::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:#21262d;}
+.pa-divider::before{left:0;}.pa-divider::after{right:0;}
+.pa-msg{border-radius:7px;padding:8px 11px;font-size:12px;margin-bottom:12px;display:none;line-height:1.5;}
+.pa-msg.err{background:rgba(255,66,66,.1);border:1px solid #ff4242;color:#ff4242;}
+.pa-msg.ok{background:rgba(0,189,3,.1);border:1px solid #00bd03;color:#00bd03;}
+.pa-msg.info{background:rgba(56,139,253,.1);border:1px solid #388bfd;color:#388bfd;}
+.pa-hint{font-size:10px;color:#8b949e;margin-top:3px;line-height:1.5;}
+.pa-footer{text-align:center;margin-top:12px;}
+.pa-link{background:none;border:none;color:#388bfd;cursor:pointer;font-size:11px;font-family:inherit;text-decoration:underline;padding:0;}
+.pa-link:hover{color:#e6edf3;}
+.pa-spin-wrap{display:none;text-align:center;padding:6px 0;font-size:11px;color:#8b949e;}
+.pa-spin{display:inline-block;width:12px;height:12px;border:2px solid #30363d;border-top-color:#388bfd;border-radius:50%;animation:paSpin .7s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes paSpin{to{transform:rotate(360deg);}}
+/* Disconnect confirm modal */
+.dc-opt{width:100%;padding:11px 14px;border-radius:8px;border:1px solid #30363d;background:#21262d;color:#e6edf3;font-size:13px;font-family:inherit;cursor:pointer;text-align:left;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;transition:background .15s,border-color .15s;}
+.dc-opt:hover{background:#2d333b;border-color:#484f58;}
+.dc-opt.danger{border-color:rgba(255,66,66,.3);}
+.dc-opt.danger:hover{background:rgba(255,66,66,.06);border-color:#ff4242;}
+.dc-opt-icon{font-size:18px;flex-shrink:0;}
+.dc-opt-title{font-weight:700;font-size:12px;margin-bottom:2px;}
+.dc-opt-desc{font-size:10px;color:#8b949e;line-height:1.5;}
 </style>
 </head>
 <body>
+<!-- ══════════════════════════════════════════════
+     PRE-AUTH — Visible by default, hides after login
+     Setup card shown immediately without any JS
+     ══════════════════════════════════════════════ -->
+<div id="pre-auth">
+
+  <!-- SETUP SCREEN (default visible) -->
+  <div id="pa-setup" class="pa-card">
+    <div class="pa-logo">
+      <div class="pa-logo-icon">🗺️</div>
+      <div class="pa-logo-title">SIPETA K3</div>
+      <div class="pa-logo-sub">Sistem Informasi Pemetaan Bahaya K3</div>
+    </div>
+    <div class="pa-title">Konfigurasi Firebase</div>
+    <div class="pa-msg info" id="pa-setup-info" style="display:block">
+      Masukkan konfigurasi Firebase project Anda. Data disimpan di browser dan tidak dikirim ke pihak lain.
+    </div>
+    <div class="pa-msg err" id="pa-setup-err"></div>
+    <div class="pa-field">
+      <label class="pa-label">Firebase API Key *</label>
+      <input class="pa-input" id="pa-apikey" type="text" placeholder="AIzaSy...">
+      <div class="pa-hint">Firebase Console → Project Settings → General → Web API Key</div>
+    </div>
+    <div class="pa-field">
+      <label class="pa-label">Firebase Project ID *</label>
+      <input class="pa-input" id="pa-projectid" type="text" placeholder="nama-project-firebase">
+      <div class="pa-hint">Contoh: webgis-k3-atp-ipb</div>
+    </div>
+    <div class="pa-field">
+      <label class="pa-label">Firebase Database URL *</label>
+      <input class="pa-input" id="pa-dburl" type="text" placeholder="https://nama-project.firebaseio.com">
+      <div class="pa-hint">Firebase Console → Realtime Database → URL yang tertera di bagian atas</div>
+    </div>
+    <div class="pa-spin-wrap" id="pa-setup-spin"><span class="pa-spin"></span>Menghubungkan ke Firebase...</div>
+    <button class="pa-btn" onclick="paSetupSave()">Simpan &amp; Lanjutkan →</button>
+  </div>
+
+  <!-- LOGIN SCREEN (hidden initially) -->
+  <div id="pa-login" class="pa-card" style="display:none">
+    <div class="pa-logo">
+      <div class="pa-logo-icon">🗺️</div>
+      <div class="pa-logo-title">SIPETA K3</div>
+      <div class="pa-logo-sub">Sistem Informasi Pemetaan Bahaya K3</div>
+    </div>
+    <div class="pa-title">Masuk ke Akun</div>
+    <div class="pa-msg err" id="pa-login-err"></div>
+    <div class="pa-msg ok"  id="pa-login-ok"></div>
+    <div class="pa-field">
+      <label class="pa-label">Username atau Alamat Email</label>
+      <input class="pa-input" id="pa-login-user" type="text" placeholder="username atau email@domain.com"
+        onkeydown="if(event.key==='Enter')document.getElementById('pa-login-pass').focus()">
+    </div>
+    <div class="pa-field">
+      <label class="pa-label">Kata Sandi</label>
+      <input class="pa-input" id="pa-login-pass" type="password" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter')paLogin()">
+    </div>
+    <div class="pa-spin-wrap" id="pa-login-spin"><span class="pa-spin"></span>Memverifikasi akun...</div>
+    <button class="pa-btn" onclick="paLogin()">Masuk</button>
+    <div class="pa-divider">atau</div>
+    <button class="pa-btn ghost" onclick="paShow('register')">Buat Akun Baru</button>
+    <div class="pa-footer">
+      <button class="pa-link" onclick="paShow('setup')">⚙️ Ubah konfigurasi Firebase</button>
+    </div>
+  </div>
+
+  <!-- REGISTER SCREEN (hidden initially) -->
+  <div id="pa-register" class="pa-card" style="display:none">
+    <div class="pa-logo">
+      <div class="pa-logo-icon">🗺️</div>
+      <div class="pa-logo-title">SIPETA K3</div>
+      <div class="pa-logo-sub">Daftar Akun Baru</div>
+    </div>
+    <div class="pa-title">Buat Akun</div>
+    <div class="pa-msg err" id="pa-reg-err"></div>
+    <div class="pa-msg ok"  id="pa-reg-ok"></div>
+    <div class="pa-field">
+      <label class="pa-label">Nama Pengguna (Username) *</label>
+      <input class="pa-input" id="pa-reg-user" type="text" placeholder="nama_pengguna"
+        oninput="this.value=this.value.replace(/\s/g,'_')">
+      <div class="pa-hint">Huruf, angka, dan garis bawah. Contoh: Budi_IPB atau syarief123</div>
+    </div>
+    <div class="pa-field">
+      <label class="pa-label">Alamat Email *</label>
+      <input class="pa-input" id="pa-reg-email" type="email" placeholder="email@domain.com">
+    </div>
+    <div class="pa-field">
+      <label class="pa-label">Kata Sandi *</label>
+      <input class="pa-input" id="pa-reg-pass" type="password" placeholder="Minimal 6 karakter">
+    </div>
+    <div class="pa-field">
+      <label class="pa-label">Konfirmasi Kata Sandi *</label>
+      <input class="pa-input" id="pa-reg-conf" type="password" placeholder="Ulangi kata sandi"
+        onkeydown="if(event.key==='Enter')paRegister()">
+    </div>
+    <div class="pa-spin-wrap" id="pa-reg-spin"><span class="pa-spin"></span>Mendaftarkan akun...</div>
+    <button class="pa-btn" onclick="paRegister()">Daftar</button>
+    <div class="pa-divider">sudah punya akun?</div>
+    <button class="pa-btn ghost" onclick="paShow('login')">Masuk</button>
+  </div>
+
+</div><!-- /pre-auth -->
+
 <div id="app">
  
 <!-- ── TOPBAR ── -->
@@ -545,6 +687,9 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
   <button id="sync-status-btn" class="tbtn" onclick="openModal('modal-sync')" title="Sinkronisasi Real-Time">🔌 Offline</button>
   <button class="tbtn gem" onclick="openModal('modal-gemini')">✦ Gemini</button>
   <div class="topbar-divider"></div>
+  <button id="btn-logout" class="tbtn" onclick="paLogout()" title="Keluar dari akun" style="display:none;gap:4px;align-items:center">
+    <span>👤</span><span id="topbar-uname" style="font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  </button>
   <button class="tbtn" onclick="toggleSidebar()">☰</button>
 </div>
  
@@ -704,7 +849,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
       </div>
       <div class="sidebar-list" id="sidebar-list"></div>
       <div class="sidebar-footer">
-        <button class="sf-btn" onclick="openModal('modal-add-fac')">🏭 + Fasilitas</button>
+        <button class="sf-btn" onclick="openAddFacModal()">🏭 + Fasilitas</button>
         <button class="sf-btn warn" onclick="openAddDangerZone()">⚠️ Area Bahaya</button>
       </div>
     </div>
@@ -777,7 +922,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
         Pilih jenis data yang ingin Anda tambahkan ke dalam sistem pemetaan K3 ini.
       </p>
       <!-- Fasilitas Card -->
-      <div class="tambah-card" onclick="closeModal('modal-tambah');openModal('modal-add-fac')">
+      <div class="tambah-card" onclick="closeModal('modal-tambah');openAddFacModal()">
         <div class="tc-icon" style="background:rgba(46,160,67,.15);border:1.5px solid var(--accent)">🏭</div>
         <div class="tc-body">
           <div class="tc-title">Fasilitas Baru</div>
@@ -830,6 +975,31 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
         <div class="form-group">
           <label class="form-label">Deskripsi / Keterangan</label>
           <textarea class="form-textarea" id="ff-desc" rows="2" placeholder="Deskripsi singkat fasilitas..."></textarea>
+        </div>
+        <!-- ── FIELD TAMBAHAN (opsional) ── -->
+        <div class="form-group">
+          <label class="form-label">Status Fasilitas <span style="color:var(--text3);font-weight:400">(opsional)</span></label>
+          <select class="form-input" id="ff-status">
+            <option value="">— Pilih Status —</option>
+            <option value="aktif">✅ Aktif / Beroperasi</option>
+            <option value="perbaikan">🔧 Dalam Perbaikan</option>
+            <option value="tidak_aktif">⛔ Tidak Aktif</option>
+          </select>
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-group">
+            <label class="form-label">Status Suhu &amp; Kelembaban <span style="color:var(--text3);font-weight:400">(opsional)</span></label>
+            <input type="text" class="form-input" id="ff-suhu" placeholder="mis. Normal / Panas / Lembab tinggi">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status Cahaya <span style="color:var(--text3);font-weight:400">(opsional)</span></label>
+            <input type="text" class="form-input" id="ff-cahaya" placeholder="mis. Baik / Kurang / Silau">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Daftar Aktivitas di Fasilitas <span style="color:var(--text3);font-weight:400">(opsional)</span></label>
+          <textarea class="form-textarea" id="ff-aktivitas" rows="2" placeholder="mis. Pembibitan tanaman, Pemanenan, Pengolahan hasil..."></textarea>
+          <span class="form-hint">Ringkasan aktivitas utama yang dilakukan di fasilitas ini</span>
         </div>
         <div class="form-group">
           <label class="form-label">Koordinat (lat, lng)</label>
@@ -1216,7 +1386,7 @@ html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);backgro
       <!-- Action buttons -->
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button class="mf-btn save" style="flex:2" onclick="connectSync()">🔗 Hubungkan &amp; Sinkronkan</button>
-        <button class="mf-btn danger" style="flex:1" onclick="disconnectSync()" title="Putuskan sinkronisasi dan hapus konfigurasi tersimpan — tidak akan reconnect saat reload">🔌 Putuskan &amp; Hapus Konfigurasi</button>
+        <button class="mf-btn danger" style="flex:1" onclick="openModal('modal-disconnect-confirm')" title="Putuskan sinkronisasi — pilih apakah data tetap dipertahankan atau dihapus">🔌 Putuskan &amp; Hapus Konfigurasi</button>
       </div>
 
       <!-- Cloud TIF Files -->
@@ -1997,23 +2167,35 @@ function openAddFacModal(editId=null) {
   if (editId) {
     const f = facilities.find(x=>x.id===editId);
     if (!f) return;
-    document.getElementById('ff-name').value = f.name||'';
-    document.getElementById('ff-desc').value = f.desc||'';
-    document.getElementById('ff-coords').value = f.lat ? `${f.lat}, ${f.lng}` : '';
+    document.getElementById('ff-name').value     = f.name||'';
+    document.getElementById('ff-desc').value     = f.desc||'';
+    document.getElementById('ff-coords').value   = f.lat ? `${f.lat}, ${f.lng}` : '';
+    document.getElementById('ff-status').value   = f.status_fac||'';
+    document.getElementById('ff-suhu').value     = f.status_suhu||'';
+    document.getElementById('ff-cahaya').value   = f.status_cahaya||'';
+    document.getElementById('ff-aktivitas').value= f.daftar_aktivitas||'';
   } else {
     document.getElementById('ff-name').value='';
     document.getElementById('ff-desc').value='';
     document.getElementById('ff-coords').value='';
+    document.getElementById('ff-status').value='';
+    document.getElementById('ff-suhu').value='';
+    document.getElementById('ff-cahaya').value='';
+    document.getElementById('ff-aktivitas').value='';
   }
   // Reset pick btn
   const pb = document.getElementById('ff-pick-btn');
   if (pb) { pb.textContent='📍 Klik Peta'; pb.classList.remove('active'); }
   openModal('modal-add-fac');
 }
- 
+
 function saveFacility() {
-  const name = document.getElementById('ff-name').value.trim();
-  const desc = document.getElementById('ff-desc').value.trim();
+  const name   = document.getElementById('ff-name').value.trim();
+  const desc   = document.getElementById('ff-desc').value.trim();
+  const status = document.getElementById('ff-status')?.value||'';
+  const suhu   = document.getElementById('ff-suhu')?.value.trim()||'';
+  const cahaya = document.getElementById('ff-cahaya')?.value.trim()||'';
+  const aktiv  = document.getElementById('ff-aktivitas')?.value.trim()||'';
   if (!name) { showToast('⚠️ Nama fasilitas wajib diisi!'); return; }
   const editId = document.getElementById('ff-edit-id').value;
   // Cek kapasitas hanya saat tambah baru (bukan edit)
@@ -2028,12 +2210,21 @@ function saveFacility() {
     const f = facilities.find(x=>x.id===editId);
     if (!f) return;
     f.name=name; f.desc=desc;
-    if (lat) { f.lat=lat; f.lng=lng; }
+    if (status !== undefined) f.status_fac = status;
+    if (suhu)   f.status_suhu     = suhu;   else if (suhu===''&&f.status_suhu)   delete f.status_suhu;
+    if (cahaya) f.status_cahaya   = cahaya; else if (cahaya===''&&f.status_cahaya) delete f.status_cahaya;
+    if (aktiv)  f.daftar_aktivitas= aktiv;  else if (aktiv===''&&f.daftar_aktivitas) delete f.daftar_aktivitas;
+    if (lat)    { f.lat=lat; f.lng=lng; }
   } else {
-    facilities.push({id:'f'+Date.now(), name, desc,
+    const newFac = {id:'f'+Date.now(), name, desc,
       lat: lat||(-6.552+(Math.random()-.5)*.015),
       lng: lng||(106.729+(Math.random()-.5)*.015),
-      activities:[]});
+      activities:[]};
+    if (status)  newFac.status_fac        = status;
+    if (suhu)    newFac.status_suhu       = suhu;
+    if (cahaya)  newFac.status_cahaya     = cahaya;
+    if (aktiv)   newFac.daftar_aktivitas  = aktiv;
+    facilities.push(newFac);
   }
   save(); renderAll(); closeModal('modal-add-fac');
   showToast(editId ? `✅ Fasilitas "${name}" diperbarui` : `✅ Fasilitas "${name}" ditambahkan`);
@@ -2390,11 +2581,31 @@ function showFacDetail(id) {
   const facAvgRi=actRis.length?Math.round(actRis.reduce((s,r)=>s+r,0)/actRis.length*10)/10:0;
   const linked = linkMap[id]!==undefined ?
     `<div style="font-size:10px;color:var(--brand);margin-top:4px">🔗 Terhubung ke fitur GeoJSON #${linkMap[id]}</div>` : '';
+
+  const statusMap={aktif:'✅ Aktif',perbaikan:'🔧 Dalam Perbaikan',tidak_aktif:'⛔ Tidak Aktif'};
+  const statusCol={aktif:'#00bd03',perbaikan:'#fcff42',tidak_aktif:'#ff4242'};
+  const statusBg ={aktif:'rgba(0,189,3,.12)',perbaikan:'rgba(252,255,66,.12)',tidak_aktif:'rgba(255,66,66,.12)'};
+  const stFac=fac.status_fac||'';
+  const statusHtml=stFac?`<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${statusBg[stFac]||'var(--bg3)'};color:${statusCol[stFac]||'var(--text2)'};border:1px solid ${(statusCol[stFac]||'#888')}44;margin-left:6px">${statusMap[stFac]||stFac}</span>`:'';
+
   let html=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px;background:var(--bg3);border-radius:var(--radius)">
     <div style="font-size:26px;font-weight:900;font-family:var(--mono);color:${col}">${facAvgRi||'—'}</div>
-    <div><div style="font-size:12px;font-weight:700;color:${col}">${rLbl(lvl)} RISK — ${fac.name}</div>
-    <div style="font-size:10px;color:var(--text3)">${fac.desc||''}${fac.desc?'<br>':''}${fac.activities.length} aktivitas · RI rata-rata ${facAvgRi} · ${fac.lat?fac.lat.toFixed(5)+', '+fac.lng.toFixed(5):'—'}</div>
+    <div style="flex:1"><div style="font-size:12px;font-weight:700;color:${col}">${rLbl(lvl)} RISK — ${fac.name}${statusHtml}</div>
+    <div style="font-size:10px;color:var(--text3)">${fac.activities.length} aktivitas · RI rata-rata ${facAvgRi} · ${fac.lat?fac.lat.toFixed(5)+', '+fac.lng.toFixed(5):'—'}</div>
     ${linked}</div></div>`;
+
+  const hasExtra=fac.desc||fac.status_suhu||fac.status_cahaya||fac.daftar_aktivitas;
+  if (hasExtra) {
+    html+=`<div style="background:var(--bg3);border-radius:var(--radius);padding:10px 12px;margin-bottom:12px;border:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">ℹ️ Informasi Fasilitas</div>
+      <div class="kv-grid">
+      ${fac.desc?`<div class=\"kv-key\">Deskripsi</div><div class=\"kv-val\">${fac.desc}</div>`:''}
+      ${fac.status_suhu?`<div class=\"kv-key\">🌡 Suhu &amp; Kelembaban</div><div class=\"kv-val\">${fac.status_suhu}</div>`:''}
+      ${fac.status_cahaya?`<div class=\"kv-key\">💡 Cahaya</div><div class=\"kv-val\">${fac.status_cahaya}</div>`:''}
+      ${fac.daftar_aktivitas?`<div class=\"kv-key\">📋 Aktivitas</div><div class=\"kv-val\" style=\"white-space:pre-wrap\">${fac.daftar_aktivitas}</div>`:''}
+      </div></div>`;
+  }
+
   if (!fac.activities.length) {
     html+=`<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">Belum ada aktivitas tercatat dalam fasilitas ini.<br><button onclick="addActivityFor('${id}')" style="margin-top:8px;padding:6px 14px;border-radius:6px;background:var(--accent2);border:1px solid var(--accent);color:#fff;font-size:11px;cursor:pointer;font-family:var(--font)">＋ Tambah Aktivitas</button></div>`;
   } else {
@@ -2409,7 +2620,7 @@ function showFacDetail(id) {
           <div style="font-size:9px;color:var(--text3)">${a.workers||'—'} · ${hCount} bahaya · RI rata-rata ${ar}</div></div>
           <div style="margin-left:auto"><div class="popup-risk-badge badge-${rL(ar)}">${rLbl(rL(ar))}</div></div>
         </div>
-        ${a.desc?`<div class="kv-grid" style="margin-bottom:8px"><div class="kv-key">Deskripsi</div><div class="kv-val">${a.desc}</div></div>`:''}
+        ${a.desc?`<div class=\"kv-grid\" style=\"margin-bottom:8px\"><div class=\"kv-key\">Deskripsi</div><div class=\"kv-val\">${a.desc}</div></div>`:''}
         <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;padding:3px 0;border-bottom:1px solid var(--border)">Daftar Bahaya (${hCount} bahaya teridentifikasi)</div>`;
       (a.hazards||[]).forEach((h,hi)=>{
         const hc=RC[rL(h.ri)]||'#888';
@@ -2422,8 +2633,8 @@ function showFacDetail(id) {
           <div class="kv-grid">
             <div class="kv-key">Bahaya</div><div class="kv-val">${h.hazard||'—'}</div>
             <div class="kv-key">Efek</div><div class="kv-val">${h.effect||'—'}</div>
-            <div class="kv-key">Likelihood</div><div class="kv-val">${h.l} — ${L_LABELS[h.l]||''}  &nbsp;|&nbsp;  Severity: ${h.s} — ${S_LABELS[h.s]||''}</div>
-            ${h.rec?`<div class="kv-key">Pengendalian</div><div class="kv-val" style="white-space:pre-wrap;line-height:1.6;font-size:10px">${h.rec}</div>`:''}
+            <div class="kv-key">Likelihood</div><div class="kv-val">${h.l} — ${L_LABELS[h.l]||''} &nbsp;|&nbsp; Severity: ${h.s} — ${S_LABELS[h.s]||''}</div>
+            ${h.rec?`<div class=\"kv-key\">Pengendalian</div><div class=\"kv-val\" style=\"white-space:pre-wrap;line-height:1.6;font-size:10px\">${h.rec}</div>`:''}
           </div>
         </div>`;
       });
@@ -3954,6 +4165,311 @@ function updateDangerLabelSize(px) {
   });
 }
  
+// ═══════════════════════════════════════════════════════════════
+//  PRE-SYNC SNAPSHOT — simpan data sebelum sinkronisasi dimulai
+// ═══════════════════════════════════════════════════════════════
+let _preSyncFac = null, _preSyncDz = null, _preSyncLm = null;
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTH SYSTEM — RTDB-only (tidak butuh Firebase Auth / Identity Toolkit API)
+//  Menggunakan: SHA-256 hash password + Firebase Realtime Database
+// ═══════════════════════════════════════════════════════════════
+var _authDb = null;  // firebase.database() instance untuk auth
+
+/* SHA-256 password hash via Web Crypto API */
+async function _sha256(str) {
+  const buf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* Email → safe RTDB key (replace . dengan koma) */
+function _emailKey(email) { return email.toLowerCase().replace(/\./g, ','); }
+
+/* Terjemahkan pesan error */
+function _fbErr(code) {
+  var m = {
+    'PERMISSION_DENIED'   : 'Akses ditolak. Periksa rules Firebase Realtime Database Anda.',
+    'NETWORK_ERROR'       : 'Gagal terhubung ke Firebase. Periksa koneksi internet.',
+    'disconnected'        : 'Koneksi Firebase terputus.'
+  };
+  return m[code] || ('Error: ' + (code||'tidak diketahui'));
+}
+
+/* Tampilkan/sembunyikan pesan di pre-auth */
+function _paMsg(id, text, show) {
+  var el=document.getElementById(id); if(!el) return;
+  el.textContent=text||''; el.style.display=(show&&text)?'block':'none';
+}
+function _paSpin(id, show) {
+  var el=document.getElementById(id); if(el) el.style.display=show?'block':'none';
+}
+
+/* Tampilkan salah satu screen */
+function paShow(screen) {
+  var map={setup:'pa-setup',login:'pa-login',register:'pa-register'};
+  Object.values(map).forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});
+  var t=map[screen]; if(t){var el=document.getElementById(t);if(el)el.style.display='block';}
+  ['pa-setup-err','pa-login-err','pa-login-ok','pa-reg-err','pa-reg-ok'].forEach(function(id){_paMsg(id,'',false);});
+  ['pa-setup-spin','pa-login-spin','pa-reg-spin'].forEach(function(id){_paSpin(id,false);});
+}
+
+/* Inisialisasi Firebase default app (RTDB saja, tidak butuh Auth) */
+function _initFirebaseForAuth(apiKey, projectId, dbUrl) {
+  try {
+    var appExists=false;
+    try { firebase.app(); appExists=true; } catch(e) { appExists=false; }
+    if (!appExists) {
+      firebase.initializeApp({ apiKey:apiKey, databaseURL:dbUrl, projectId:projectId });
+    }
+    _authDb = firebase.database();
+    return true;
+  } catch(e) { console.error('Firebase init error:', e); return false; }
+}
+
+/* Sesi login (disimpan di localStorage) */
+function _saveSession(username, email) {
+  try { localStorage.setItem('k3_session', JSON.stringify({username:username, email:email, ts:Date.now()})); } catch(e){}
+}
+function _getSession() {
+  try {
+    var s=JSON.parse(localStorage.getItem('k3_session')||'null');
+    if (!s||!s.username) return null;
+    // Sesi expired setelah 30 hari
+    if (Date.now()-s.ts > 30*24*60*60*1000) { localStorage.removeItem('k3_session'); return null; }
+    return s;
+  } catch(e) { return null; }
+}
+function _clearSession() { try { localStorage.removeItem('k3_session'); } catch(e){} }
+
+/* ── SETUP ── */
+function paSetupSave() {
+  var apiKey   =(document.getElementById('pa-apikey')    ||{value:''}).value.trim();
+  var projectId=(document.getElementById('pa-projectid') ||{value:''}).value.trim();
+  var dbUrl    =(document.getElementById('pa-dburl')     ||{value:''}).value.trim();
+  _paMsg('pa-setup-err','',false);
+  if (!apiKey||!projectId||!dbUrl) { _paMsg('pa-setup-err','⚠️ Semua field wajib diisi.',true); return; }
+  if (!dbUrl.startsWith('https://')) { _paMsg('pa-setup-err','⚠️ Database URL harus diawali https://',true); return; }
+  _paSpin('pa-setup-spin',true);
+  var ok=false;
+  try { ok=_initFirebaseForAuth(apiKey,projectId,dbUrl); } catch(e){ ok=false; }
+  if (!ok) { _paSpin('pa-setup-spin',false); _paMsg('pa-setup-err','❌ Konfigurasi tidak valid. Periksa API Key, Project ID, dan Database URL.',true); return; }
+  try { localStorage.setItem('k3_auth_config',JSON.stringify({apiKey:apiKey,projectId:projectId,dbUrl:dbUrl})); } catch(e){}
+  _paSpin('pa-setup-spin',false);
+  // Cek sesi aktif
+  var sess=_getSession();
+  if (sess) { _paOnLogin(sess.username, sess.email); }
+  else { paShow('login'); }
+}
+
+/* ── LOGIN ── */
+async function paLogin() {
+  var raw =(document.getElementById('pa-login-user')||{value:''}).value.trim();
+  var pass=(document.getElementById('pa-login-pass')||{value:''}).value;
+  _paMsg('pa-login-err','',false); _paMsg('pa-login-ok','',false);
+  if (!raw||!pass) { _paMsg('pa-login-err','⚠️ Isi semua field.',true); return; }
+  if (!_authDb)    { _paMsg('pa-login-err','⚠️ Firebase belum dikonfigurasi.',true); return; }
+  _paSpin('pa-login-spin',true);
+
+  var username=raw, email='';
+  try {
+    if (raw.indexOf('@')!==-1) {
+      // Login dengan email — cari username
+      var eSnap=await _authDb.ref('k3-auth/emails/'+_emailKey(raw)).get();
+      if (!eSnap.exists()) { _paSpin('pa-login-spin',false); _paMsg('pa-login-err','❌ Email tidak ditemukan.',true); return; }
+      username=eSnap.val().username; email=raw.toLowerCase();
+    } else {
+      // Login dengan username — cari email
+      var uSnap=await _authDb.ref('k3-auth/users/'+raw).get();
+      if (!uSnap.exists()) { _paSpin('pa-login-spin',false); _paMsg('pa-login-err','❌ Username tidak ditemukan.',true); return; }
+      email=uSnap.val().email; username=raw;
+    }
+    // Verifikasi password
+    var stored=await _authDb.ref('k3-auth/users/'+username+'/passwordHash').get();
+    if (!stored.exists()) { _paSpin('pa-login-spin',false); _paMsg('pa-login-err','❌ Data akun tidak ditemukan.',true); return; }
+    var inputHash=await _sha256(pass+username); // password+username sebagai salt
+    if (inputHash!==stored.val()) { _paSpin('pa-login-spin',false); _paMsg('pa-login-err','❌ Kata sandi salah.',true); return; }
+    _paSpin('pa-login-spin',false);
+    _saveSession(username, email);
+    _paOnLogin(username, email);
+  } catch(e) {
+    _paSpin('pa-login-spin',false);
+    _paMsg('pa-login-err','❌ Gagal login: '+(e.message||e),true);
+  }
+}
+
+/* ── REGISTER ── */
+async function paRegister() {
+  var uname=(document.getElementById('pa-reg-user') ||{value:''}).value.trim();
+  var email=(document.getElementById('pa-reg-email')||{value:''}).value.trim().toLowerCase();
+  var pass =(document.getElementById('pa-reg-pass') ||{value:''}).value;
+  var conf =(document.getElementById('pa-reg-conf') ||{value:''}).value;
+  _paMsg('pa-reg-err','',false); _paMsg('pa-reg-ok','',false);
+  if (!uname||!email||!pass||!conf) { _paMsg('pa-reg-err','⚠️ Semua field wajib diisi.',true); return; }
+  if (!/^[a-zA-Z0-9_]+$/.test(uname)) { _paMsg('pa-reg-err','⚠️ Username hanya boleh berisi huruf, angka, dan garis bawah.',true); return; }
+  if (email.indexOf('@')===-1||email.indexOf('.')===-1) { _paMsg('pa-reg-err','⚠️ Format email tidak valid. Harus mengandung "@" dan domain.',true); return; }
+  if (pass.length<6) { _paMsg('pa-reg-err','⚠️ Kata sandi minimal 6 karakter.',true); return; }
+  if (pass!==conf)   { _paMsg('pa-reg-err','⚠️ Konfirmasi kata sandi tidak cocok.',true); return; }
+  if (!_authDb)      { _paMsg('pa-reg-err','⚠️ Firebase belum dikonfigurasi.',true); return; }
+  _paSpin('pa-reg-spin',true);
+  try {
+    // Cek username unik
+    var uCheck=await _authDb.ref('k3-auth/users/'+uname).get();
+    if (uCheck.exists()) { _paSpin('pa-reg-spin',false); _paMsg('pa-reg-err','❌ Username "'+uname+'" sudah digunakan.',true); return; }
+    // Cek email unik
+    var eCheck=await _authDb.ref('k3-auth/emails/'+_emailKey(email)).get();
+    if (eCheck.exists()) { _paSpin('pa-reg-spin',false); _paMsg('pa-reg-err','❌ Email "'+email+'" sudah terdaftar.',true); return; }
+    // Hash password
+    var hash=await _sha256(pass+uname);
+    // Simpan user ke RTDB
+    await _authDb.ref('k3-auth/users/'+uname).set({email:email, passwordHash:hash, createdAt:new Date().toISOString()});
+    await _authDb.ref('k3-auth/emails/'+_emailKey(email)).set({username:uname});
+    _paSpin('pa-reg-spin',false);
+    _paMsg('pa-reg-ok','✅ Akun berhasil dibuat! Silakan masuk.',true);
+    setTimeout(function(){paShow('login');},1800);
+  } catch(e) {
+    _paSpin('pa-reg-spin',false);
+    _paMsg('pa-reg-err','❌ Gagal mendaftar: '+(e.message||e)+(e.message&&e.message.indexOf('PERMISSION')!==-1?' — Pastikan RTDB rules mengizinkan path k3-auth/':''),true);
+  }
+}
+
+/* ── SETELAH LOGIN BERHASIL ── */
+function _paOnLogin(username, email) {
+  var pa=document.getElementById('pre-auth'); if(pa) pa.style.display='none';
+  var btn=document.getElementById('btn-logout'); if(btn) btn.style.display='inline-flex';
+  var span=document.getElementById('topbar-uname'); if(span) span.textContent=username;
+  if (typeof map!=='undefined'&&map&&typeof map.invalidateSize==='function') {
+    setTimeout(function(){map.invalidateSize();},150);
+  }
+}
+
+/* ── LOGOUT ── */
+function paLogout() {
+  var name=(document.getElementById('topbar-uname')||{textContent:''}).textContent;
+  if (!confirm('Keluar dari akun'+(name?' "'+name+'"':'')+' ?')) return;
+  _clearSession();
+  var pa=document.getElementById('pre-auth'); if(pa) pa.style.display='flex';
+  paShow('login');
+  var btn=document.getElementById('btn-logout'); if(btn) btn.style.display='none';
+  var span=document.getElementById('topbar-uname'); if(span) span.textContent='';
+}
+
+/* ── BOOTSTRAP ── */
+window.addEventListener('load', function() {
+  paShow('setup'); // default aman
+  var conf=null;
+  try { conf=JSON.parse(localStorage.getItem('k3_auth_config')||'null'); } catch(e){}
+  if (!conf||!conf.apiKey||!conf.projectId||!conf.dbUrl) { paShow('setup'); return; }
+  var ok=false;
+  try { ok=_initFirebaseForAuth(conf.apiKey,conf.projectId,conf.dbUrl); } catch(e){ ok=false; }
+  if (!ok) { paShow('setup'); return; }
+  try {
+    var apk=document.getElementById('pa-apikey');    if(apk) apk.value=conf.apiKey;
+    var pid=document.getElementById('pa-projectid'); if(pid) pid.value=conf.projectId;
+    var dbu=document.getElementById('pa-dburl');     if(dbu) dbu.value=conf.dbUrl;
+  } catch(e){}
+  var sess=_getSession();
+  if (sess) { _paOnLogin(sess.username, sess.email); }
+  else { paShow('login'); }
+});
+
+/* ── DISCONNECT CONFIRM ── */
+function executeDisconnect(keepData) {
+  closeModal('modal-disconnect-confirm');
+  disconnectSync(keepData);
+}
+
+/* ── MODIFIKASI disconnectSync ── */
+var _origDisconnectSync = typeof disconnectSync !== 'undefined' ? disconnectSync : null;
+disconnectSync = function(keepData) {
+  if (typeof keepData==='undefined') keepData=true;
+  if (fbRoomRef) { try { fbRoomRef.off(); } catch(e){} }
+  fbSyncEnabled=false; fbDb=null; fbRoomRef=null;
+  if (!keepData&&_preSyncFac!==null) {
+    try {
+      facilities =JSON.parse(JSON.stringify(_preSyncFac));
+      dangerZones=JSON.parse(JSON.stringify(_preSyncDz));
+      linkMap    =JSON.parse(JSON.stringify(_preSyncLm));
+      save(); renderAll();
+      showToast('🗑 Data sinkronisasi dihapus dari peta — Firebase tidak terpengaruh');
+    } catch(e){ showToast('⚠️ Gagal memulihkan data pra-sinkronisasi'); }
+  } else { showToast('📌 Data sinkronisasi dipertahankan di peta'); }
+  _preSyncFac=null; _preSyncDz=null; _preSyncLm=null;
+  localStorage.removeItem('k3_firebase'); localStorage.removeItem('k3_room');
+  localStorage.setItem('k3_sync_off','1');
+  updateSyncBadge(false);
+  var banner=document.getElementById('sync-banner');
+  if (banner) { banner.className='sync-status-banner off'; banner.textContent='🔌 Terputus · Semua perubahan hanya tersimpan lokal'; }
+  ['sync-fb-url','sync-fb-apikey','sync-fb-projectid','sync-room-code'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+};
+
+/* ── Patch initFirebaseSync agar tidak konflik dengan auth app ── */
+var _origInitFirebaseSync = typeof initFirebaseSync !== 'undefined' ? initFirebaseSync : null;
+initFirebaseSync = function() {
+  if (localStorage.getItem('k3_sync_off')==='1') { updateSyncBadge(false); return; }
+  var conf=null; try { conf=JSON.parse(localStorage.getItem('k3_firebase')||'null'); } catch(e){}
+  var room=localStorage.getItem('k3_room')||'';
+  if (!conf||!room) { updateSyncBadge(false); return; }
+  if (typeof firebase==='undefined') { showToast('⚠️ Firebase SDK belum termuat'); return; }
+  try {
+    try { _preSyncFac=JSON.parse(JSON.stringify(facilities)); _preSyncDz=JSON.parse(JSON.stringify(dangerZones)); _preSyncLm=JSON.parse(JSON.stringify(linkMap)); } catch(e){}
+    var appExists=false; try { firebase.app(); appExists=true; } catch(e){ appExists=false; }
+    if (!appExists) { firebase.initializeApp(conf); }
+    fbDb=firebase.database(); fbRoomRef=fbDb.ref('k3rooms/'+room);
+    fbRoomRef.on('value', function(snapshot) {
+      if (fbIgnoreNext) { fbIgnoreNext=false; return; }
+      var data=snapshot.val(); if (!data||!data._ts) return;
+      if (data._ts===_lastPushTs) return;
+      applyCloudData(data);
+    }, function(err) { showToast('❌ Firebase error: '+err.message); updateSyncBadge(false); });
+    fbSyncEnabled=true; updateSyncBadge(true);
+    var el_url=document.getElementById('sync-fb-url');
+    var el_key=document.getElementById('sync-fb-apikey');
+    var el_proj=document.getElementById('sync-fb-projectid');
+    var el_room=document.getElementById('sync-room-code');
+    if(el_url) el_url.value=conf.databaseURL||''; if(el_key) el_key.value=conf.apiKey||'';
+    if(el_proj) el_proj.value=conf.projectId||''; if(el_room) el_room.value=room;
+    showToast('🔗 Sinkronisasi aktif · Room: '+room);
+    var banner=document.getElementById('sync-banner');
+    if (banner) { banner.className='sync-status-banner on'; banner.textContent='🔗 Terhubung · Room: '+room+' · Sinkronisasi aktif'; }
+  } catch(e) { showToast('❌ Firebase error: '+e.message); updateSyncBadge(false); }
+}
+
 </script>
+
+<!-- DISCONNECT CONFIRM MODAL (di dalam app agar CSS modal berlaku) -->
+<div class="modal-overlay" id="modal-disconnect-confirm">
+  <div class="modal" style="max-width:390px">
+    <div class="modal-header">
+      <div style="font-size:16px">🔌</div>
+      <div class="modal-title">Putuskan Sinkronisasi</div>
+      <button class="modal-close" onclick="closeModal('modal-disconnect-confirm')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.65;">
+        Sinkronisasi akan diputus sepenuhnya. Semua perubahan yang dibuat selama sinkronisasi aktif
+        <strong style="color:var(--text)">sudah tersimpan di Firebase</strong>.
+        Pilih apa yang ingin dilakukan dengan data yang saat ini ditampilkan dari database:
+      </p>
+      <button class="dc-opt" onclick="executeDisconnect(true)">
+        <div class="dc-opt-icon">📌</div>
+        <div>
+          <div class="dc-opt-title">Pertahankan Data di Peta</div>
+          <div class="dc-opt-desc">Data dari database tetap terlihat di peta setelah sinkronisasi diputus. Perubahan selanjutnya hanya bersifat lokal.</div>
+        </div>
+      </button>
+      <button class="dc-opt danger" onclick="executeDisconnect(false)">
+        <div class="dc-opt-icon">🗑</div>
+        <div>
+          <div class="dc-opt-title">Hapus Data Sinkronisasi dari Peta</div>
+          <div class="dc-opt-desc">Mengembalikan peta ke kondisi sebelum sinkronisasi dimulai. Data di Firebase <strong>tidak akan terhapus</strong>.</div>
+        </div>
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="mf-btn cancel" onclick="closeModal('modal-disconnect-confirm')">Batal</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
