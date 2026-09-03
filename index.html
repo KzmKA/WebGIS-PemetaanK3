@@ -1963,8 +1963,11 @@ function activityRi(act) {
 }
 function facLevel(fac) {
   if (!fac.activities||!fac.activities.length) return 'none';
+  // Level risiko fasilitas = level dari RI TERTINGGI di antara seluruh aktivitas
+  // dalam fasilitas ini (bukan rata-rata), agar titik fasilitas menyorot
+  // tingkat risiko dari bahaya paling berisiko yang teridentifikasi.
   const ris = fac.activities.map(a => activityRi(migrateActivity({...a})));
-  return rL(ris.reduce((s,r)=>s+r,0)/ris.length);
+  return rL(Math.max(...ris));
 }
  
 function renderMarkers() {
@@ -2011,7 +2014,7 @@ function buildFacPopup(f) {
     ${linked}
     <div class="popup-stat-row">
       <div class="popup-stat"><div class="num">${f.activities.length}</div><div class="lbl">Aktivitas</div></div>
-      <div class="popup-stat"><div class="num" style="color:${col}">${facAvgRi||'—'}</div><div class="lbl">RI Rata-rata</div></div>
+      <div class="popup-stat"><div class="num" style="color:${facAvgRi?RC[rL(facAvgRi)]:'#888'}">${facAvgRi||'—'}</div><div class="lbl">RI Rata-rata</div></div>
       <div class="popup-stat"><div class="num" style="color:${maxActRi?RC[rL(maxActRi)]:'#888'}">${maxActRi||'—'}</div><div class="lbl">RI Maks</div></div>
     </div>
     ${noAct}
@@ -2589,7 +2592,7 @@ function showFacDetail(id) {
   const statusHtml=stFac?`<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:${statusBg[stFac]||'var(--bg3)'};color:${statusCol[stFac]||'var(--text2)'};border:1px solid ${(statusCol[stFac]||'#888')}44;margin-left:6px">${statusMap[stFac]||stFac}</span>`:'';
 
   let html=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px;background:var(--bg3);border-radius:var(--radius)">
-    <div style="font-size:26px;font-weight:900;font-family:var(--mono);color:${col}">${facAvgRi||'—'}</div>
+    <div style="font-size:26px;font-weight:900;font-family:var(--mono);color:${facAvgRi?RC[rL(facAvgRi)]:'#888'}">${facAvgRi||'—'}</div>
     <div style="flex:1"><div style="font-size:12px;font-weight:700;color:${col}">${rLbl(lvl)} RISK — ${fac.name}${statusHtml}</div>
     <div style="font-size:10px;color:var(--text3)">${fac.activities.length} aktivitas · RI rata-rata ${facAvgRi} · ${fac.lat?fac.lat.toFixed(5)+', '+fac.lng.toFixed(5):'—'}</div>
     ${linked}</div></div>`;
