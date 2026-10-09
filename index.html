@@ -1892,7 +1892,7 @@ function copyLastCoords() {
 // ═══════════════════════════════════════════════════════
 // RENDER ALL
 // ═══════════════════════════════════════════════════════
-function renderAll() { renderMarkers(); renderDangerZones(); renderSidebar(); updateStats(); updateCapacityUI(); }
+function renderAll() { renderMarkers(); renderDangerZones(); renderSidebar(); updateStats(); updateCapacityUI(); applyLinkedFacilityRiStyle(); }
 
 function save() {
   // Simpan ke IndexedDB (async, tidak blocking)
@@ -1961,13 +1961,25 @@ function activityRi(act) {
   if (!hz.length) return act.ri || 0;
   return hz.reduce((s,h) => s + (h.l||1)*(h.s||1), 0) / hz.length;
 }
+// RI TERTINGGI (L×S) dari seluruh bahaya pada seluruh aktivitas dalam fasilitas.
+// Bukan rata-rata aktivitas maupun rata-rata fasilitas: satu bahaya berisiko
+// tinggi tetap terlihat walau rata-rata aktivitas/fasilitasnya masih medium.
+function facMaxRi(fac) {
+  let max = 0;
+  (fac.activities||[]).forEach(a => {
+    (migrateActivity({...a}).hazards||[]).forEach(h => {
+      const ri = (h.l||1)*(h.s||1);
+      if (ri > max) max = ri;
+    });
+  });
+  return max;
+}
 function facLevel(fac) {
   if (!fac.activities||!fac.activities.length) return 'none';
-  // Level risiko fasilitas = level dari RI TERTINGGI di antara seluruh aktivitas
-  // dalam fasilitas ini (bukan rata-rata), agar titik fasilitas menyorot
-  // tingkat risiko dari bahaya paling berisiko yang teridentifikasi.
-  const ris = fac.activities.map(a => activityRi(migrateActivity({...a})));
-  return rL(Math.max(...ris));
+  // Level risiko fasilitas = level dari RI TERTINGGI di antara seluruh bahaya
+  // pada seluruh aktivitas dalam fasilitas (bukan rata-rata), agar titik dan
+  // polygon fasilitas menyorot aktivitas paling berbahaya yang teridentifikasi.
+  return rL(facMaxRi(fac));
 }
  
 function renderMarkers() {
@@ -2776,6 +2788,7 @@ function processGeoJSONFile(file, savedFileId=null, fromSync=false) {
       st.innerHTML=`✅ ${file.name}: <b>${rawFeatures.length}</b> fitur dimuat (total: ${allGeojsonFeatures.length})`;
       st.style.color='var(--low)';
       renderFileLists();
+      applyLinkedFacilityRiStyle();
       showToast(`✅ GeoJSON dimuat: ${rawFeatures.length} fitur dari ${file.name}`);
       // Sync GeoJSON to cloud
       // Hanya push ke cloud bila dipanggil oleh user (bukan dari applyCloudData/restore)
@@ -3035,6 +3048,40 @@ function saveLinks() {
   save(); renderAll(); closeModal('modal-link');
   const n=Object.keys(linkMap).length;
   showToast(`🔗 ${n} link disimpan`);
+}
+
+// Warna polygon (fitur GeoJSON) yang ter-link ke fasilitas = level RI TERTINGGI
+// fasilitas tersebut, sama persis dengan warna titik (dot) fasilitas.
+// Fitur yang tidak ter-link tidak disentuh (tetap memakai gaya aslinya).
+let _facRiStyled = []; // [{layer, parent}] layer yang sedang diwarnai oleh fungsi ini
+function applyLinkedFacilityRiStyle() {
+  // 1) Kembalikan gaya asli layer yang sebelumnya diwarnai (mis. setelah unlink,
+  //    perubahan gaya layer, atau level fasilitas berubah)
+  const prev = _facRiStyled; _facRiStyled = [];
+  prev.forEach(p => { try { p.parent.resetStyle(p.layer); } catch(e) {} });
+
+  // 2) Warnai fitur GeoJSON yang ter-link ke fasilitas
+  const paint = (layer, col) => {
+    if (layer.eachLayer && !layer.setRadius) { layer.eachLayer(sub => paint(sub, col)); return; }
+    if (layer.setStyle) layer.setStyle({ color: col, fillColor: col });
+  };
+  Object.keys(linkMap).forEach(k => {
+    if (k.startsWith('dz_')) return;                  // area bahaya, bukan fasilitas
+    const fac = facilities.find(f => f.id === k);
+    if (!fac) return;
+    const lvl = facLevel(fac);
+    if (lvl === 'none') return;                       // fasilitas belum punya aktivitas
+    const item = allGeojsonFeatures[linkMap[k]];
+    if (!item || !item.feat || !item.feat.geometry) return;
+    const lf = loadedFiles.find(x => x.type === 'geojson' && x.fileId === item.fileId);
+    if (!lf || !lf.layer) return;
+    lf.layer.eachLayer(l => {
+      if (l.feature && l.feature.geometry === item.feat.geometry) {
+        paint(l, RC[lvl]);
+        _facRiStyled.push({ layer: l, parent: lf.layer });
+      }
+    });
+  });
 }
  
 // ═══════════════════════════════════════════════════════
@@ -4097,6 +4144,7 @@ function applyGJStyle(fileId) {
       if (l.setRadius) l.setRadius(sty.pointRadius);
     });
   }
+  applyLinkedFacilityRiStyle(); // polygon yang ter-link tetap berwarna sesuai RI tertinggi fasilitas
   // ── Simpan perubahan gaya secara permanen ─────────────────────────────
   // 1. Simpan geojsonStyleMap ke IndexedDB (kv store) + push ke Firebase
   save();
