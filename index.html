@@ -1961,6 +1961,11 @@ function activityRi(act) {
   if (!hz.length) return act.ri || 0;
   return hz.reduce((s,h) => s + (h.l||1)*(h.s||1), 0) / hz.length;
 }
+// RI TERTINGGI (L×S) di antara seluruh bahaya pada SATU aktivitas (bukan rata-rata).
+// Dipakai pada popup titik fasilitas agar bahaya paling berisiko tiap aktivitas terlihat.
+function activityMaxRi(act) {
+  return (act.hazards || []).reduce((max,h) => Math.max(max, (h.l||1)*(h.s||1)), 0);
+}
 // RI TERTINGGI (L×S) dari seluruh bahaya pada seluruh aktivitas dalam fasilitas.
 // Bukan rata-rata aktivitas maupun rata-rata fasilitas: satu bahaya berisiko
 // tinggi tetap terlihat walau rata-rata aktivitas/fasilitasnya masih medium.
@@ -2006,9 +2011,10 @@ function buildFacPopup(f) {
   const col = lvl==='none' ? '#6e7681' : RC[lvl];
   const actRis = f.activities.map(a=>activityRi(migrateActivity({...a})));
   const facAvgRi = actRis.length ? Math.round(actRis.reduce((s,r)=>s+r,0)/actRis.length*10)/10 : 0;
-  const maxActRi = actRis.length ? Math.round(Math.max(...actRis)*10)/10 : 0;
+  // "RI Maks" = RI TERTINGGI dari seluruh bahaya di fasilitas (bukan rata-rata aktivitas/fasilitas)
+  const maxActRi = facMaxRi(f);
   const acts = f.activities.slice(0,5).map(a => {
-    const m=migrateActivity({...a}); const ar=Math.round(activityRi(m)*10)/10; const c=RC[rL(ar)];
+    const m=migrateActivity({...a}); const ar=activityMaxRi(m); const c=RC[rL(ar)]; // RI tertinggi dari bahaya aktivitas ini (bukan rata-rata)
     const hc=(m.hazards||[]).length;
     return `<div class="popup-act-item" onclick="showFacDetail('${f.id}')">
       <div class="act-risk-dot" style="background:${c}"></div>
